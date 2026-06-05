@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { signInWithPopup } from 'firebase/auth'
+import { signInWithRedirect } from 'firebase/auth'
+import { useAuth } from '@/contexts/AuthContext'
 import { auth, googleProvider } from '@/lib/firebase'
 
 function pickBanner(): string {
@@ -21,21 +22,13 @@ function GoogleIcon() {
 }
 
 export default function Login() {
-  const [error, setError] = useState<string | null>(null)
+  const { redirectError } = useAuth()
   const [loading, setLoading] = useState(false)
   const [banner] = useState(pickBanner)
 
   async function handleSignIn() {
-    setError(null)
     setLoading(true)
-    try {
-      await signInWithPopup(auth, googleProvider)
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Erreur de connexion'
-      if (!msg.includes('popup-closed')) setError(msg)
-    } finally {
-      setLoading(false)
-    }
+    await signInWithRedirect(auth, googleProvider)
   }
 
   return (
@@ -61,8 +54,8 @@ export default function Login() {
               {loading ? 'Connexion...' : 'Continuer avec Google'}
             </button>
 
-            {error && (
-              <p className="text-xs text-destructive text-center pt-1">{error}</p>
+            {redirectError && (
+              <p className="text-xs text-destructive text-center pt-1">{redirectError}</p>
             )}
           </div>
         </div>
