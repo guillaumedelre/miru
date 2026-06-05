@@ -51,13 +51,19 @@ extension/
 
 ### Authentification
 
+Flux en deux temps via `signInWithRedirect` (pas de popup) :
+
 ```
-Login (Google OAuth)
-  → Firebase Auth
-  → AuthContext.user
-  → StoreProvider(userId)
-    → chargement Firestore
-    → store Zustand hydraté
+1. Clic "Continuer avec Google"
+     → signInWithRedirect(auth, googleProvider)
+     → redirection vers accounts.google.com
+
+2. Retour sur l'app
+     → AuthContext mount → getRedirectResult(auth)
+     → onAuthStateChanged → AuthContext.user
+     → StoreProvider(userId)
+          → chargement Firestore
+          → store Zustand hydraté
 ```
 
 ### Ajout d'un média
