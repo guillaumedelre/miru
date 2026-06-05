@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { create, type UseBoundStore, type StoreApi } from 'zustand'
 import { loadUserData, saveUserData } from '@/lib/firestore'
 import type { TrackedItem, WatchedEpisode } from '@/types'
@@ -67,15 +67,10 @@ function createMiruStore(): UseBoundStore<StoreApi<MiruStore>> {
 const StoreContext = createContext<UseBoundStore<StoreApi<MiruStore>> | null>(null)
 
 export function StoreProvider({ userId, children }: { userId: string; children: ReactNode }) {
-  const storeRef = useRef<UseBoundStore<StoreApi<MiruStore>> | null>(null)
+  const [store] = useState(createMiruStore)
   const [ready, setReady] = useState(false)
 
-  if (!storeRef.current) {
-    storeRef.current = createMiruStore()
-  }
-
   useEffect(() => {
-    const store = storeRef.current!
 
     // Charge les données depuis Firestore
     loadUserData(userId)
@@ -98,7 +93,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       unsub()
       clearTimeout(timeout)
     }
-  }, [userId])
+  }, [userId, store])
 
   if (!ready) {
     return (
@@ -110,12 +105,13 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   }
 
   return (
-    <StoreContext.Provider value={storeRef.current}>
+    <StoreContext.Provider value={store}>
       {children}
     </StoreContext.Provider>
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useStore<T = MiruStore>(
   selector: (state: MiruStore) => T = (s) => s as unknown as T
 ): T {
