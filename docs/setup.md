@@ -71,24 +71,11 @@ L'app est accessible sur `http://localhost:5173`. Le code source est monté en v
 ## Commandes
 
 ```bash
-npm run dev               # serveur de développement (http://localhost:5173)
-npm run build             # build de production (TypeScript + Vite)
-npm run build:extension   # build de l'extension navigateur → extension/dist/
-npm run lint              # ESLint
-npm run preview           # prévisualisation du build de production
+npm run dev      # serveur de développement (http://localhost:5173)
+npm run build    # build de production (TypeScript + Vite)
+npm run lint     # ESLint
+npm run preview  # prévisualisation du build de production
 ```
-
-### Builder l'extension pour la production
-
-Avant de lancer `npm run build:extension` en production, ajoute dans `.env` :
-
-```
-VITE_MIRU_URL=https://ton-url.vercel.app
-```
-
-Sans cette variable, l'extension pointe sur `http://localhost:5173` (utile pour les tests locaux).
-
-Voir [docs/extension.md](extension.md) pour l'installation dans Chrome et Firefox.
 
 `localhost` est autorisé par défaut dans la console Firebase — aucune configuration supplémentaire n'est nécessaire pour développer en local.
 

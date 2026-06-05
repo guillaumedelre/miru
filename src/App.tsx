@@ -6,7 +6,6 @@ import WeekView from '@/pages/WeekView'
 import Library from '@/pages/Library'
 import Stats from '@/pages/Stats'
 import Login from '@/pages/Login'
-import Import from '@/pages/Import'
 
 function AppShell() {
   const { user, loading, logout } = useAuth()
@@ -81,7 +80,6 @@ function AppShell() {
           <Route path="/" element={<WeekView />} />
           <Route path="/library" element={<Library />} />
           <Route path="/stats" element={<Stats />} />
-          <Route path="/import" element={<Import />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
