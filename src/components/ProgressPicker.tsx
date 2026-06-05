@@ -57,6 +57,7 @@ export default function ProgressPicker({ sourceId, source, type, totalEpisodes, 
   const [loadingAll, setLoadingAll] = useState(false)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setResolvedTotal(totalEpisodes)
 
     if (source === 'tmdb' && type === 'series') {
@@ -95,6 +96,7 @@ export default function ProgressPicker({ sourceId, source, type, totalEpisodes, 
         .catch(() => {})
         .finally(() => setLoadingSeasons(false))
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceId, source, type, totalEpisodes, malId])
 
   async function toggleOpen(seasonNumber: number) {

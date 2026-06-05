@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { signInWithPopup } from 'firebase/auth'
 import { auth, googleProvider } from '@/lib/firebase'
 
@@ -23,7 +23,7 @@ function GoogleIcon() {
 export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const banner = useRef(pickBanner()).current
+  const [banner] = useState(pickBanner)
 
   async function handleSignIn() {
     setError(null)
