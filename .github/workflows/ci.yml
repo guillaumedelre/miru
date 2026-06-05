@@ -47,10 +47,12 @@ jobs:
           name: extension
           path: extension/dist/
 
-  publish-extension:
+  release-dev:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/download-artifact@v4
@@ -59,12 +61,55 @@ jobs:
           path: extension/dist/
 
       - name: Zip extension
-        run: cd extension/dist && zip -r ../../miru-extension.zip .
+        run: cd extension/dist && zip -r ../../miru-extension-dev.zip .
+
+      - name: Create or update dev release
+        run: |
+          gh release delete dev --repo ${{ github.repository }} --yes 2>/dev/null || true
+          gh release create dev miru-extension-dev.zip \
+            --repo ${{ github.repository }} \
+            --title "Dev build" \
+            --notes "Latest build from \`main\`. Updated on every merge." \
+            --prerelease \
+            --target main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-extension:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: extension
+          path: extension/dist/
+
+      - name: Set version
+        id: version
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Zip extension
+        run: cd extension/dist && zip -r ../../miru-extension-${{ steps.version.outputs.tag }}.zip .
+
+      - name: Create GitHub Release
+        run: |
+          gh release create ${{ steps.version.outputs.tag }} \
+            miru-extension-${{ steps.version.outputs.tag }}.zip \
+            --repo ${{ github.repository }} \
+            --title "Miru ${{ steps.version.outputs.tag }}" \
+            --generate-notes \
+            --prerelease=${{ contains(steps.version.outputs.tag, '-') }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to Chrome Web Store
         run: |
           npx --yes chrome-webstore-upload-cli@3 upload \
-            --source miru-extension.zip \
+            --source miru-extension-${{ steps.version.outputs.tag }}.zip \
             --extension-id ${{ secrets.CHROME_EXTENSION_ID }} \
             --client-id ${{ secrets.CHROME_CLIENT_ID }} \
             --client-secret ${{ secrets.CHROME_CLIENT_SECRET }} \
