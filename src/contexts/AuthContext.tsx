@@ -17,15 +17,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [redirectError, setRedirectError] = useState<string | null>(null)
 
   useEffect(() => {
-    getRedirectResult(auth).catch((e: unknown) => {
-      const msg = e instanceof Error ? e.message : 'Erreur de connexion'
-      if (!msg.includes('redirect-cancelled')) setRedirectError(msg)
-    })
+    let pendingUser: User | null = null
+    let authSettled = false
+    let redirectSettled = false
+
+    function settle() {
+      if (authSettled && redirectSettled) {
+        setUser(pendingUser)
+        setLoading(false)
+      }
+    }
+
+    getRedirectResult(auth)
+      .catch((e: unknown) => {
+        const msg = e instanceof Error ? e.message : 'Erreur de connexion'
+        if (!msg.includes('redirect-cancelled')) setRedirectError(msg)
+      })
+      .finally(() => {
+        redirectSettled = true
+        settle()
+      })
 
     const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u)
-      setLoading(false)
+      pendingUser = u
+      authSettled = true
+      settle()
     })
+
     return unsubscribe
   }, [])
 
