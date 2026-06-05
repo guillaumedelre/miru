@@ -12,6 +12,7 @@ dist
 dist-ssr
 extension/dist
 extension/*.zip
+.firebase/
 *.local
 .env
 
@@ -30,4 +31,4 @@ extension/*.zip
 *.Identifier
 
 # Dev screenshots
-image.png
+image*.png
