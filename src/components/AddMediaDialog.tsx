@@ -26,12 +26,13 @@ interface Pending {
 interface Props {
   open: boolean
   onClose: () => void
+  initialQuery?: string
 }
 
-export default function AddMediaDialog({ open, onClose }: Props) {
+export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
   const { addItem, markWatched, items } = useStore()
   const [tab, setTab] = useState<Tab>('anime')
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(initialQuery ?? '')
   const [results, setResults] = useState<(AnilistMedia | TmdbMedia)[]>([])
   const [loading, setLoading] = useState(false)
   const [pending, setPending] = useState<Pending | null>(null)
@@ -39,6 +40,7 @@ export default function AddMediaDialog({ open, onClose }: Props) {
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!query.trim()) { setResults([]); return }
     if (debounce.current) clearTimeout(debounce.current)
     debounce.current = setTimeout(async () => {
@@ -55,13 +57,15 @@ export default function AddMediaDialog({ open, onClose }: Props) {
   }, [query, tab])
 
   useEffect(() => {
-    setQuery('')
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setQuery(initialQuery ?? '')
     setResults([])
     setPending(null)
     setWatchedEps(new Set())
-  }, [open])
+  }, [open, initialQuery])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setResults([])
     setPending(null)
     setWatchedEps(new Set())
@@ -78,7 +82,7 @@ export default function AddMediaDialog({ open, onClose }: Props) {
     const source: Source = isAnilist ? 'anilist' : 'tmdb'
 
     let totalEpisodes: number | undefined
-    let isFinished = false
+    let isFinished: boolean
     let malId: number | undefined
     let episodeDuration: number | undefined
 

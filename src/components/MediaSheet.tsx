@@ -57,6 +57,7 @@ export default function MediaSheet({ item, open, onClose, initialTab = 'info' }:
 
   useEffect(() => {
     if (!open) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTab(initialTab)
     setChecked(new Set(getWatchedForItem(item.id)))
     setResolvedTotal(item.totalEpisodes)
@@ -81,6 +82,7 @@ export default function MediaSheet({ item, open, onClose, initialTab = 'info' }:
         setWatchProviders(prov ?? { providers: [], link: null })
       }).finally(() => setLoadingInfo(false))
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, item.sourceId, item.source, item.type])
 
   function handleSaveProgress() {

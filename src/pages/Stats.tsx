@@ -75,6 +75,7 @@ export default function Stats() {
 
   useEffect(() => {
     if (items.length === 0) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingGenres(true)
 
     async function fetchGenres() {
@@ -104,6 +105,7 @@ export default function Stats() {
     }
 
     fetchGenres()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.length])
 
   const genreCounts = Object.values(genreMap)

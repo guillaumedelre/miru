@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '@/store'
 import { getAiringSchedule } from '@/api/anilist'
 import { getNextEpisode } from '@/api/tmdb'
@@ -38,10 +38,11 @@ export function useWeeklySchedule(weekOffset = 0) {
   const [schedule, setSchedule] = useState<Map<string, WeeklyEpisode[]>>(new Map())
   const [loading, setLoading] = useState(false)
 
-  const weekDates = getWeekDates(weekOffset)
+  const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset])
 
   useEffect(() => {
     const watching = items.filter((i) => i.status === 'watching')
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (watching.length === 0) { setSchedule(new Map()); return }
 
     setLoading(true)
@@ -109,7 +110,7 @@ export function useWeeklySchedule(weekOffset = 0) {
     }
 
     fetch()
-  }, [items, weekOffset])
+  }, [items, weekDates, weekOffset])
 
   return { schedule, weekDates, loading }
 }

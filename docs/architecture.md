@@ -32,9 +32,19 @@ src/
 ├── contexts/       # AuthContext (Firebase Auth)
 ├── hooks/          # useWeeklySchedule
 ├── lib/            # firebase.ts, firestore.ts, utils.ts
-├── pages/          # WeekView, Library, Stats, Login
+├── pages/          # WeekView, Library, Stats, Login, Import
 ├── store/          # Zustand store + StoreProvider
 └── types/          # TrackedItem, WatchedEpisode, MediaType
+
+extension/
+├── src/
+│   └── content-scripts/  # scripts injectés dans les pages tierces
+│       ├── anilist.ts
+│       ├── mal.ts
+│       └── crunchyroll.ts
+├── manifest.json          # Manifest V3 (Chrome + Firefox)
+├── build.mjs              # script de build (3 IIFE séparés)
+└── tsconfig.json
 ```
 
 ## Flux de données
