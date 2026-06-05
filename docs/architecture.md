@@ -51,20 +51,16 @@ extension/
 
 ### Authentification
 
-Flux en deux temps via `signInWithRedirect` (pas de popup) :
-
 ```
-1. Clic "Continuer avec Google"
-     → signInWithRedirect(auth, googleProvider)
-     → redirection vers accounts.google.com
-
-2. Retour sur l'app
-     → AuthContext mount → getRedirectResult(auth)
-     → onAuthStateChanged → AuthContext.user
-     → StoreProvider(userId)
-          → chargement Firestore
-          → store Zustand hydraté
+Clic "Continuer avec Google"
+  → signInWithPopup(auth, googleProvider)
+  → onAuthStateChanged → AuthContext.user
+  → StoreProvider(userId)
+    → chargement Firestore
+    → store Zustand hydraté
 ```
+
+Si la popup est bloquée par le navigateur (`auth/popup-blocked`), un message guide l'utilisateur pour autoriser les popups sur le site.
 
 ### Ajout d'un média
 
