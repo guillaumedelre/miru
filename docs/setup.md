@@ -2,7 +2,7 @@
 
 ## Prérequis
 
-- Node.js 20+
+- Node.js 24+
 - Un compte [Firebase][firebase-console] (gratuit)
 - Une clé API [TMDB][tmdb-api] (gratuite)
 

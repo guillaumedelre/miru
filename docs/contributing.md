@@ -10,18 +10,33 @@
 
 ## Releases
 
-La publication de l'extension sur le Chrome Web Store et Firefox AMO se déclenche automatiquement en taguant une release :
+### Canaux de distribution
+
+| Canal | Déclencheur | Artefact | Cible |
+|-------|-------------|----------|-------|
+| `dev` | merge sur `main` | `miru-extension-dev.zip` | GitHub Release pre-release (tag flottant) |
+| beta | tag `v1.2.3-beta.1` | `miru-extension-v1.2.3-beta.1.zip` | GitHub Release pre-release + stores canal beta |
+| stable | tag `v1.2.3` | `miru-extension-v1.2.3.zip` | GitHub Release stable + Chrome Store + Firefox AMO |
+
+### Publier une version
 
 ```bash
+# Version stable
 git tag v1.2.3
 git push origin v1.2.3
+
+# Beta
+git tag v1.2.3-beta.1
+git push origin v1.2.3-beta.1
 ```
 
-Les secrets nécessaires dans GitHub Actions :
+La CI crée automatiquement le GitHub Release, publie sur les stores et génère les notes de version depuis les commits.
+
+### Secrets GitHub Actions requis
 
 | Secret | Usage |
 |--------|-------|
-| `VITE_MIRU_URL` | URL Vercel injectée dans l'extension |
+| `VITE_MIRU_URL` | URL Vercel injectée dans l'extension au build |
 | `CHROME_EXTENSION_ID` | ID du Chrome Web Store |
 | `CHROME_CLIENT_ID` | Google Cloud Console OAuth |
 | `CHROME_CLIENT_SECRET` | Google Cloud Console OAuth |
