@@ -1,44 +1,44 @@
-# Extension navigateur
+# Browser extension
 
-L'extension injecte un bouton "Ajouter à Miru" sur les pages de détail des sites supportés. Au clic, elle ouvre l'app miru avec le titre pré-rempli dans le dialog d'ajout.
+The extension injects an "Add to Miru" button on detail pages of supported sites. On click, it opens the miru app with the title pre-filled in the add dialog.
 
-## Sites supportés
+## Supported sites
 
-| Site | URL détectée | Extraction |
+| Site | Detected URL | Extraction |
 |------|-------------|-----------|
-| AniList | `anilist.co/anime/:id/:slug` | slug → titre |
-| MyAnimeList | `myanimelist.net/anime/:id/:slug` | slug → titre |
-| Crunchyroll | `crunchyroll.com/[locale/]series/:id/:slug` | slug → titre |
+| AniList | `anilist.co/anime/:id/:slug` | slug → title |
+| MyAnimeList | `myanimelist.net/anime/:id/:slug` | slug → title |
+| Crunchyroll | `crunchyroll.com/[locale/]series/:id/:slug` | slug → title |
 
-## Installation depuis GitHub Releases (recommandé pour tester)
+## Install from GitHub Releases (recommended for testing)
 
-Sans avoir à builder localement, télécharge le zip depuis la page [Releases][releases] :
+No local build required — download the zip from the [Releases][releases] page:
 
-- **`miru-extension-dev.zip`** — dernier build de `main`, mis à jour à chaque merge
-- **`miru-extension-vX.Y.Z.zip`** — version stable ou beta taguée
+- **`miru-extension-dev.zip`** — latest build from `main`, updated on every merge
+- **`miru-extension-vX.Y.Z.zip`** — stable or beta tagged version
 
 ### Chrome
 
-1. Décompresser le zip dans un dossier
-2. Ouvrir `chrome://extensions`
-3. Activer le **Mode développeur** (en haut à droite)
-4. Cliquer **Charger l'extension non empaquetée**
-5. Sélectionner le dossier décompressé
+1. Unzip the archive into a folder
+2. Open `chrome://extensions`
+3. Enable **Developer mode** (top right)
+4. Click **Load unpacked**
+5. Select the unzipped folder
 
 ### Firefox
 
-1. Ouvrir `about:debugging#/runtime/this-firefox`
-2. Cliquer **Charger un module complémentaire temporaire**
-3. Sélectionner le fichier `manifest.json` dans le dossier décompressé
+1. Open `about:debugging#/runtime/this-firefox`
+2. Click **Load Temporary Add-on**
+3. Select the `manifest.json` file inside the unzipped folder
 
-> L'extension temporaire est supprimée au redémarrage de Firefox.
-> Pour une installation permanente, utiliser une version signée via [addons.mozilla.org][amo].
+> The temporary add-on is removed when Firefox restarts.
+> For a permanent install, use a signed version via [addons.mozilla.org][amo].
 
-## Build local
+## Local build
 
-Nécessaire uniquement pour développer l'extension.
+Only needed when developing the extension.
 
-Ajouter dans `.env` :
+Add to `.env`:
 
 ```
 VITE_MIRU_URL=https://your-miru.vercel.app
@@ -48,15 +48,15 @@ VITE_MIRU_URL=https://your-miru.vercel.app
 npm run build:extension
 ```
 
-Les fichiers compilés sont dans `extension/dist/`. Ce dossier n'est pas versionné.
+Compiled files are in `extension/dist/`. This folder is not versioned.
 
-Sans `VITE_MIRU_URL`, l'extension pointe sur `http://localhost:5173` (pratique pour les tests locaux).
+Without `VITE_MIRU_URL`, the extension points to `http://localhost:5173` (handy for local testing).
 
-## Limitations connues
+## Known limitations
 
-AniList et Crunchyroll sont des SPA[^spa] : le bouton est injecté uniquement lors de la navigation directe vers une page série (pas lors des navigations internes à l'application).
+AniList and Crunchyroll are SPAs[^spa]: the button is only injected on direct navigation to a series page (not during in-app navigation).
 
-[^spa]: Single Page Application : la navigation interne ne recharge pas la page, donc le content script ne se réexécute pas.
+[^spa]: Single Page Application: internal navigation does not reload the page, so the content script does not re-execute.
 
 [releases]: https://github.com/guillaumedelre/miru/releases
 [amo]: https://addons.mozilla.org/developers/

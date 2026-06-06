@@ -1,21 +1,21 @@
 # miru
 
-Application de suivi de médias (animes, séries, films) avec calendrier de diffusion hebdomadaire.
+Media tracking app (anime, series, movies) with a weekly airing calendar.
 
-## Fonctionnalités
+## Features
 
-- **Médiathèque** — ajoute et suis tes animes (AniList), séries et films (TMDB)
-- **Calendrier** — planning hebdomadaire des épisodes à venir
-- **Statistiques** — temps de visionnage, répartition par type/statut/genre
-- **Authentification** — connexion Google via Firebase Auth
-- **Synchronisation** — données persistées dans Firestore, accessibles sur tous tes appareils
-- **Extension navigateur** — importe en un clic depuis AniList, MAL et Crunchyroll (Chrome + Firefox)
+- **Library** — add and track your anime (AniList), series and movies (TMDB)
+- **Calendar** — weekly schedule of upcoming episodes
+- **Stats** — watch time, breakdown by type/status/genre
+- **Authentication** — Google sign-in via Firebase Auth
+- **Sync** — data persisted in Firestore, available across all your devices
+- **Browser extension** — one-click import from AniList, MAL and Crunchyroll (Chrome + Firefox)
 
 ## Documentation
 
-| Document | Contenu |
+| Document | Content |
 |----------|---------|
-| [docs/setup.md](docs/setup.md) | Prérequis, installation, variables d'environnement, commandes |
-| [docs/architecture.md](docs/architecture.md) | Stack, structure du code, flux de données |
-| [docs/contributing.md](docs/contributing.md) | Workflow, conventions de branches et de commits |
-| [docs/extension.md](docs/extension.md) | Build et installation de l'extension navigateur |
+| [docs/setup.md](docs/setup.md) | Prerequisites, installation, environment variables, commands |
+| [docs/architecture.md](docs/architecture.md) | Stack, code structure, data flow |
+| [docs/contributing.md](docs/contributing.md) | Workflow, branch and commit conventions |
+| [docs/extension.md](docs/extension.md) | Building and installing the browser extension |
