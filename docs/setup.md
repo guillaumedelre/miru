@@ -1,10 +1,10 @@
 # Setup
 
-## Prérequis
+## Prerequisites
 
 - Node.js 24+
-- Un compte [Firebase][firebase-console] (gratuit)
-- Une clé API [TMDB][tmdb-api] (gratuite)
+- A [Firebase][firebase-console] account (free)
+- A [TMDB][tmdb-api] API key (free)
 
 ## Installation
 
@@ -15,12 +15,12 @@ npm install
 cp .env.example .env
 ```
 
-## Variables d'environnement
+## Environment variables
 
-Remplis le fichier `.env` :
+Fill in the `.env` file:
 
 ```
-VITE_TMDB_API_KEY=          # clé API TMDB (v3)
+VITE_TMDB_API_KEY=          # TMDB API key (v3)
 VITE_FIREBASE_API_KEY=
 VITE_FIREBASE_AUTH_DOMAIN=
 VITE_FIREBASE_PROJECT_ID=
@@ -29,18 +29,18 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
 ```
 
-### Obtenir la clé TMDB
+### Getting the TMDB key
 
-1. Crée un compte sur [themoviedb.org][tmdb]
-2. Paramètres → API → Demander une clé API (v3)
-3. Copie la clé dans `VITE_TMDB_API_KEY`
+1. Create an account on [themoviedb.org][tmdb]
+2. Settings → API → Request an API key (v3)
+3. Copy the key into `VITE_TMDB_API_KEY`
 
-### Configurer Firebase
+### Configuring Firebase
 
-1. Crée un projet sur la [console Firebase][firebase-console]
-2. Active **Authentication** → méthode de connexion **Google**
-3. Crée une **base de données Firestore** (région `eur3`)
-4. Configure les règles Firestore :
+1. Create a project in the [Firebase console][firebase-console]
+2. Enable **Authentication** → sign-in method **Google**
+3. Create a **Firestore database** (region `eur3`)
+4. Configure Firestore rules:
 
 ```
 rules_version = '2';
@@ -53,44 +53,44 @@ service cloud.firestore {
 }
 ```
 
-5. Paramètres du projet → Tes applications → ajoute une app Web
-6. Copie les valeurs du bloc `firebaseConfig` dans le `.env`
+5. Project settings → Your apps → add a Web app
+6. Copy the values from the `firebaseConfig` block into `.env`
 
-## Docker (optionnel)
+## Docker (optional)
 
-Un `compose.yaml` est fourni pour lancer l'environnement de développement dans un conteneur sans installer Node localement.
+A `compose.yaml` is included to run the development environment in a container without installing Node locally.
 
 ```bash
 docker compose up
 ```
 
-L'app est accessible sur `http://localhost:5173`. Le code source est monté en volume — le hot reload fonctionne comme en local.
+The app is available at `http://localhost:5173`. The source code is mounted as a volume — hot reload works just like locally.
 
-> Le fichier `.env` est requis avant de lancer Docker (même contenu que pour le développement local).
+> The `.env` file is required before starting Docker (same content as for local development).
 
-## Commandes
+## Commands
 
 ```bash
-npm run dev               # serveur de développement (http://localhost:5173)
-npm run build             # build de production (TypeScript + Vite)
-npm run build:extension   # build de l'extension navigateur → extension/dist/
+npm run dev               # development server (http://localhost:5173)
+npm run build             # production build (TypeScript + Vite)
+npm run build:extension   # browser extension build → extension/dist/
 npm run lint              # ESLint
-npm run preview           # prévisualisation du build de production
+npm run preview           # preview the production build
 ```
 
-### Builder l'extension pour la production
+### Building the extension for production
 
-Avant de lancer `npm run build:extension` en production, ajoute dans `.env` :
+Before running `npm run build:extension` in production, add to `.env`:
 
 ```
-VITE_MIRU_URL=https://ton-url.vercel.app
+VITE_MIRU_URL=https://your-url.vercel.app
 ```
 
-Sans cette variable, l'extension pointe sur `http://localhost:5173` (utile pour les tests locaux).
+Without this variable, the extension points to `http://localhost:5173` (useful for local testing).
 
-Voir [docs/extension.md](extension.md) pour l'installation dans Chrome et Firefox.
+See [docs/extension.md](extension.md) for installation in Chrome and Firefox.
 
-`localhost` est autorisé par défaut dans la console Firebase — aucune configuration supplémentaire n'est nécessaire pour développer en local.
+`localhost` is allowed by default in the Firebase console — no additional configuration is needed for local development.
 
 [firebase-console]: https://console.firebase.google.com
 [tmdb]: https://www.themoviedb.org
