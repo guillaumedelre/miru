@@ -4,6 +4,7 @@ Media tracking app (anime, series, movies) with a weekly airing calendar.
 
 ## Features
 
+- **To Watch** — backlog, current week episodes and upcoming returns
 - **Library** — add and track your anime (AniList), series and movies (TMDB)
 - **Calendar** — weekly schedule of upcoming episodes
 - **Stats** — watch time, breakdown by type/status/genre
