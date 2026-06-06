@@ -120,7 +120,7 @@ export default function Stats() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Statistiques</h1>
+      <h1 className="text-2xl font-bold hidden sm:block">Statistiques</h1>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard label="Titres suivis" value={items.length} />

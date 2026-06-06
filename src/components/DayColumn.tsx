@@ -14,7 +14,7 @@ export default function DayColumn({ date, dayIndex, episodes, isToday }: Props) 
   const [, month, day] = date.split('-')
 
   return (
-    <div className={`flex flex-col gap-2 min-w-[160px] flex-1 rounded-xl p-3 border-2 ${isToday ? 'border-primary bg-primary/10' : 'border-border bg-card'}`}>
+    <div className={`flex flex-col gap-2 min-w-[110px] sm:min-w-[150px] flex-1 rounded-xl p-2 sm:p-3 border-2 ${isToday ? 'border-primary bg-primary/10' : 'border-border bg-card'}`}>
       <div className="text-center mb-1">
         <p className={`text-xs font-bold uppercase tracking-wide ${isToday ? 'text-primary' : 'text-muted-foreground'}`}>
           {DAY_NAMES[dayIndex]}

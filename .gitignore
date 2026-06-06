@@ -31,3 +31,6 @@ extension/*.zip
 
 # Dev screenshots
 image*.png
+
+# Firebase CLI cache
+.firebase/
