@@ -52,8 +52,7 @@ export default function WeekView() {
   return (
     <div className="space-y-4">
       <div className="flex items-center">
-        <h1 className="text-2xl font-bold hidden sm:block sm:mr-4">Calendrier</h1>
-        <Button variant="ghost" size="icon" onClick={() => setWeekOffset((o) => o - 1)}>
+<Button variant="ghost" size="icon" onClick={() => setWeekOffset((o) => o - 1)}>
           <ChevronLeft className="size-4" />
         </Button>
         <span className="flex-1 text-xs sm:text-sm font-medium text-center whitespace-nowrap">

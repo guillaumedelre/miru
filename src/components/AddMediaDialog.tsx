@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Sheet, SheetClose, SheetBody } from '@/components/ui/sheet'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -146,53 +146,54 @@ export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
   const showPicker = pending && pending.type !== 'movie'
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-xl flex flex-col" style={{ maxHeight: '85vh' }}>
-        <DialogHeader className="shrink-0">
-          <DialogTitle>Ajouter un média</DialogTitle>
-        </DialogHeader>
+    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
+      <SheetClose />
 
-        {pending ? (
-          <div className="flex flex-col gap-3 overflow-hidden min-h-0 flex-1">
-            <div className="flex gap-3 items-center shrink-0">
-              <img src={pending.image} alt="" className="w-14 h-20 object-cover rounded shrink-0" />
-              <div>
-                <p className="font-semibold text-sm leading-tight">{pending.title}</p>
-                {pending.totalEpisodes && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {pending.totalEpisodes} épisodes au total
-                  </p>
-                )}
-                {watchedEps.size > 0 && (
-                  <p className="text-xs text-primary mt-1 font-semibold">
-                    {watchedEps.size} épisode{watchedEps.size > 1 ? 's' : ''} coché{watchedEps.size > 1 ? 's' : ''}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {showPicker && (
-              <div className="flex-1 min-h-0 overflow-y-auto border border-border rounded-lg px-3">
-                <ProgressPicker
-                  sourceId={String(pending.result.id)}
-                  source={pending.source}
-                  type={pending.type}
-                  totalEpisodes={pending.totalEpisodes}
-                  malId={pending.malId}
-                  checked={watchedEps}
-                  onChange={setWatchedEps}
-                  onTotalResolved={(total) => setPending((p) => p ? { ...p, totalEpisodes: total } : p)}
-                />
-              </div>
-            )}
-
-            <div className="flex gap-2 justify-end shrink-0 pt-1">
-              <Button variant="ghost" onClick={() => setPending(null)}>Retour</Button>
-              <Button onClick={handleConfirm}>Ajouter</Button>
+      {pending ? (
+        <>
+          {/* En-tête : cover + titre */}
+          <div className="shrink-0 flex gap-4 px-6 pt-6 pb-4 border-b border-border">
+            <img src={pending.image} alt="" className="w-20 h-28 object-cover rounded-lg shrink-0 shadow-md" />
+            <div className="flex flex-col justify-center gap-2 min-w-0 pr-8">
+              <h2 className="text-base font-semibold leading-tight">{pending.title}</h2>
+              {pending.totalEpisodes && (
+                <p className="text-xs text-muted-foreground">{pending.totalEpisodes} épisodes au total</p>
+              )}
+              {watchedEps.size > 0 && (
+                <p className="text-xs text-primary font-semibold">
+                  {watchedEps.size} épisode{watchedEps.size > 1 ? 's' : ''} coché{watchedEps.size > 1 ? 's' : ''}
+                </p>
+              )}
             </div>
           </div>
-        ) : (
-          <>
+
+          {/* ProgressPicker scrollable */}
+          {showPicker && (
+            <SheetBody className="px-6 py-4">
+              <ProgressPicker
+                sourceId={String(pending.result.id)}
+                source={pending.source}
+                type={pending.type}
+                totalEpisodes={pending.totalEpisodes}
+                malId={pending.malId}
+                checked={watchedEps}
+                onChange={setWatchedEps}
+                onTotalResolved={(total) => setPending((p) => p ? { ...p, totalEpisodes: total } : p)}
+              />
+            </SheetBody>
+          )}
+
+          {/* Footer */}
+          <div className="shrink-0 flex gap-2 justify-end px-6 py-4 border-t border-border mt-auto">
+            <Button variant="ghost" onClick={() => setPending(null)}>Retour</Button>
+            <Button onClick={handleConfirm}>Ajouter</Button>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* En-tête : titre + onglets + recherche */}
+          <div className="shrink-0 px-6 pt-6 pb-4 border-b border-border space-y-4">
+            <h2 className="text-base font-semibold pr-10">Ajouter un média</h2>
             <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
               <TabsList className="w-full">
                 <TabsTrigger value="anime" className="flex-1">Anime</TabsTrigger>
@@ -200,51 +201,52 @@ export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
                 <TabsTrigger value="movie" className="flex-1">Film</TabsTrigger>
               </TabsList>
             </Tabs>
-
             <Input
               placeholder="Rechercher..."
               value={query}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
               autoFocus
             />
+          </div>
 
-            <div className="max-h-80 overflow-y-auto overflow-x-hidden space-y-2">
-              {loading && <p className="text-sm text-muted-foreground text-center py-4">Recherche...</p>}
-              {!loading && results.length === 0 && query.trim() && (
-                <p className="text-sm text-muted-foreground text-center py-4">Aucun résultat</p>
-              )}
-              {results.map((r) => {
-                const isAnilist = 'coverImage' in r
-                const id = r.id
-                const source: Source = isAnilist ? 'anilist' : 'tmdb'
-                const title = isAnilist
-                  ? ((r as AnilistMedia).title.english ?? (r as AnilistMedia).title.romaji)
-                  : ((r as TmdbMedia).name ?? (r as TmdbMedia).title ?? '')
-                const image = isAnilist
-                  ? (r as AnilistMedia).coverImage.large
-                  : posterUrl((r as TmdbMedia).poster_path)
-                const alreadyAdded = items.some((i) => i.sourceId === String(id) && i.source === source)
+          {/* Résultats scrollables */}
+          <SheetBody className="px-6 py-4 space-y-2">
+            {loading && <p className="text-sm text-muted-foreground text-center py-6">Recherche...</p>}
+            {!loading && results.length === 0 && query.trim() && (
+              <p className="text-sm text-muted-foreground text-center py-6">Aucun résultat</p>
+            )}
+            {!loading && results.length === 0 && !query.trim() && (
+              <p className="text-sm text-muted-foreground text-center py-6">Tape un titre pour rechercher.</p>
+            )}
+            {results.map((r) => {
+              const isAnilist = 'coverImage' in r
+              const id = r.id
+              const source: Source = isAnilist ? 'anilist' : 'tmdb'
+              const title = isAnilist
+                ? ((r as AnilistMedia).title.english ?? (r as AnilistMedia).title.romaji)
+                : ((r as TmdbMedia).name ?? (r as TmdbMedia).title ?? '')
+              const image = isAnilist
+                ? (r as AnilistMedia).coverImage.large
+                : posterUrl((r as TmdbMedia).poster_path)
+              const alreadyAdded = items.some((i) => i.sourceId === String(id) && i.source === source)
 
-                return (
-                  <Button
-                    key={id}
-                    variant="ghost"
-                    className="w-full h-auto justify-start gap-3 px-2 py-2 disabled:opacity-60"
-                    disabled={alreadyAdded}
-                    onClick={() => !alreadyAdded && handleSelect(r)}
-                  >
-                    <img src={image} alt="" className="w-10 h-14 object-cover rounded shrink-0" />
-                    <span className="text-left text-sm font-medium leading-tight flex-1 min-w-0 whitespace-normal line-clamp-2">{title}</span>
-                    {alreadyAdded && (
-                      <span className="text-xs text-muted-foreground shrink-0">Déjà ajouté</span>
-                    )}
-                  </Button>
-                )
-              })}
-            </div>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+              return (
+                <Button
+                  key={id}
+                  variant="ghost"
+                  className="w-full h-auto justify-start gap-3 px-2 py-2 disabled:opacity-60"
+                  disabled={alreadyAdded}
+                  onClick={() => !alreadyAdded && handleSelect(r)}
+                >
+                  <img src={image} alt="" className="w-10 h-14 object-cover rounded shrink-0" />
+                  <span className="text-left text-sm font-medium leading-tight flex-1 min-w-0 whitespace-normal line-clamp-2">{title}</span>
+                  {alreadyAdded && <span className="text-xs text-muted-foreground shrink-0">Déjà ajouté</span>}
+                </Button>
+              )
+            })}
+          </SheetBody>
+        </>
+      )}
+    </Sheet>
   )
 }

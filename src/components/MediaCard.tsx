@@ -32,14 +32,15 @@ function variantForId(id: string): MaskedImageVariant {
 
 interface Props {
   item: TrackedItem
+  flipped?: boolean
+  onFlip?: () => void
 }
 
-export default function MediaCard({ item }: Props) {
+export default function MediaCard({ item, flipped = false, onFlip }: Props) {
   const { removeItem } = useStore()
   const [sheetOpen, setSheetOpen] = useState(false)
   const [initialTab, setInitialTab] = useState<'info' | 'progress'>('info')
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const [flipped, setFlipped] = useState(false)
   const variant = variantForId(item.id)
   const maskStyle = {
     maskImage: `url(${MASK_MAP[variant]})`,
@@ -58,7 +59,7 @@ export default function MediaCard({ item }: Props) {
       <div
         className="flex flex-col items-center w-full cursor-pointer"
         style={{ perspective: '1000px' }}
-        onClick={() => setFlipped(f => !f)}
+        onClick={onFlip}
       >
         <div
           className={`relative w-full aspect-[3/4] transition-transform duration-500 [transform-style:preserve-3d] ${flipped ? '[transform:rotateY(180deg)]' : ''}`}
