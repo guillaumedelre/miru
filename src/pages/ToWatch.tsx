@@ -65,6 +65,7 @@ function BacklogTab() {
 
   useEffect(() => {
     const watching = items.filter(i => i.status === 'watching')
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (watching.length === 0) { setRawEpisodes([]); setLoading(false); return }
 
     setLoading(true)
@@ -207,6 +208,7 @@ function ReturningTab() {
 
   useEffect(() => {
     const watching = items.filter(i => i.status === 'watching')
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (watching.length === 0) { setEntries([]); setLoading(false); return }
 
     setLoading(true)
