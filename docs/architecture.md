@@ -32,7 +32,7 @@ src/
 ├── contexts/       # AuthContext (Firebase Auth)
 ├── hooks/          # useWeeklySchedule
 ├── lib/            # firebase.ts, firestore.ts, utils.ts
-├── pages/          # WeekView, Library, Stats, Login, Import
+├── pages/          # ToWatch, WeekView, Library, Stats, Login, Import
 ├── store/          # Zustand store + StoreProvider
 └── types/          # TrackedItem, WatchedEpisode, MediaType
 

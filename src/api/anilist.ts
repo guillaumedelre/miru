@@ -27,7 +27,7 @@ export interface AnilistMedia {
 export async function searchMedia(search: string, type: 'ANIME' | 'MANGA'): Promise<AnilistMedia[]> {
   const data = await query<{ Page: { media: AnilistMedia[] } }>(`
     query ($search: String, $type: MediaType) {
-      Page(perPage: 10) {
+      Page(perPage: 50) {
         media(search: $search, type: $type) {
           id
           idMal
