@@ -39,6 +39,7 @@ export default function MediaCard({ item }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [initialTab, setInitialTab] = useState<'info' | 'progress'>('info')
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [flipped, setFlipped] = useState(false)
   const variant = variantForId(item.id)
   const maskStyle = {
     maskImage: `url(${MASK_MAP[variant]})`,
@@ -55,10 +56,13 @@ export default function MediaCard({ item }: Props) {
   return (
     <>
       <div
-        className="group flex flex-col items-center w-60"
+        className="flex flex-col items-center w-full cursor-pointer"
         style={{ perspective: '1000px' }}
+        onClick={() => setFlipped(f => !f)}
       >
-        <div className="relative w-60 h-80 transition-transform duration-500 [transform-style:preserve-3d] group-hover:[transform:rotateY(180deg)]">
+        <div
+          className={`relative w-full aspect-[3/4] transition-transform duration-500 [transform-style:preserve-3d] ${flipped ? '[transform:rotateY(180deg)]' : ''}`}
+        >
 
           {/* Front : image masquée + overlay titre/badge */}
           <div className="absolute inset-0 [backface-visibility:hidden]">
@@ -91,7 +95,7 @@ export default function MediaCard({ item }: Props) {
             )}
             <div className="flex items-center gap-3">
               <button
-                onClick={() => openSheet('info')}
+                onClick={(e) => { e.stopPropagation(); openSheet('info') }}
                 className="w-10 h-10 rounded-full flex items-center justify-center bg-secondary hover:bg-secondary/70 transition-colors cursor-pointer"
                 title="Fiche info"
               >
@@ -99,7 +103,7 @@ export default function MediaCard({ item }: Props) {
               </button>
               {item.type !== 'movie' && (
                 <button
-                  onClick={() => openSheet('progress')}
+                  onClick={(e) => { e.stopPropagation(); openSheet('progress') }}
                   className="w-10 h-10 rounded-full flex items-center justify-center bg-secondary hover:bg-secondary/70 transition-colors cursor-pointer"
                   title="Avancement"
                 >
@@ -107,7 +111,7 @@ export default function MediaCard({ item }: Props) {
                 </button>
               )}
               <button
-                onClick={() => setConfirmOpen(true)}
+                onClick={(e) => { e.stopPropagation(); setConfirmOpen(true) }}
                 className="w-10 h-10 rounded-full flex items-center justify-center bg-secondary hover:bg-destructive hover:text-destructive-foreground transition-colors cursor-pointer"
                 title="Supprimer"
               >
