@@ -17,15 +17,17 @@ export interface MediaMetadata extends MediaDisplayInfo {
 }
 
 export function extractDisplayInfo(result: AnilistMedia | TmdbMedia): MediaDisplayInfo {
-  const isAnilist = 'coverImage' in result
+  if (result._source === 'anilist') {
+    return {
+      title: result.title.english ?? result.title.romaji,
+      image: result.coverImage.large,
+      source: 'anilist',
+    }
+  }
   return {
-    title: isAnilist
-      ? ((result as AnilistMedia).title.english ?? (result as AnilistMedia).title.romaji)
-      : ((result as TmdbMedia).name ?? (result as TmdbMedia).title ?? ''),
-    image: isAnilist
-      ? (result as AnilistMedia).coverImage.large
-      : posterUrl((result as TmdbMedia).poster_path),
-    source: isAnilist ? 'anilist' : 'tmdb',
+    title: result.name ?? result.title ?? '',
+    image: posterUrl(result.poster_path),
+    source: 'tmdb',
   }
 }
 
@@ -40,23 +42,20 @@ export async function resolveMediaMetadata(
   let malId: number | undefined
   let episodeDuration: number | undefined
 
-  if (source === 'anilist') {
-    const a = result as AnilistMedia
-    totalEpisodes = a.episodes ?? a.chapters ?? undefined
-    isFinished = a.status === 'FINISHED' || a.status === 'CANCELLED'
-    if (a.idMal) malId = a.idMal
-    if (a.duration) episodeDuration = a.duration
+  if (result._source === 'anilist') {
+    totalEpisodes = result.episodes ?? result.chapters ?? undefined
+    isFinished = result.status === 'FINISHED' || result.status === 'CANCELLED'
+    if (result.idMal) malId = result.idMal
+    if (result.duration) episodeDuration = result.duration
   } else if (tab === 'series') {
-    const t = result as TmdbMedia
-    totalEpisodes = t.number_of_episodes
+    totalEpisodes = result.number_of_episodes
     const details = await getTvSeasons(Number(result.id)).catch(() => null)
     isFinished = details?.isFinished ?? false
     if (details) totalEpisodes = details.seasons.reduce((s, season) => s + season.episode_count, 0)
-    if (t.episode_run_time?.length) episodeDuration = t.episode_run_time[0]
+    if (result.episode_run_time?.length) episodeDuration = result.episode_run_time[0]
   } else {
     isFinished = true
-    const t = result as TmdbMedia
-    if (t.runtime) episodeDuration = t.runtime
+    if (result.runtime) episodeDuration = result.runtime
   }
 
   return { title, image, source, type: tab, totalEpisodes, isFinished, malId, episodeDuration }

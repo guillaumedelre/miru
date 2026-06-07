@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { signInWithPopup } from 'firebase/auth'
+import { FirebaseError } from 'firebase/app'
 import { auth, googleProvider } from '@/lib/firebase'
 
 function pickBanner(): string {
@@ -31,10 +32,13 @@ export default function Login() {
     try {
       await signInWithPopup(auth, googleProvider)
     } catch (e: unknown) {
-      const code = (e as { code?: string }).code ?? ''
-      if (code === 'auth/popup-blocked') {
-        setError("Les popups sont bloquées. Clique sur l'icône dans la barre d'adresse pour autoriser les popups sur ce site, puis réessaie.")
-      } else if (code !== 'auth/popup-closed-by-user') {
+      if (e instanceof FirebaseError) {
+        if (e.code === 'auth/popup-blocked') {
+          setError("Les popups sont bloquées. Clique sur l'icône dans la barre d'adresse pour autoriser les popups sur ce site, puis réessaie.")
+        } else if (e.code !== 'auth/popup-closed-by-user') {
+          setError(e.message)
+        }
+      } else {
         setError(e instanceof Error ? e.message : 'Erreur de connexion')
       }
       setLoading(false)

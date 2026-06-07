@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { create, type UseBoundStore, type StoreApi } from 'zustand'
 import { loadUserData, saveUserData } from '@/lib/firestore'
 import { notifyError } from '@/lib/errors'
-import type { TrackedItem, TrackedItemPatch, UserData, WatchedEpisode } from '@/types'
+import { TrackedItemSchema, type TrackedItem, type TrackedItemPatch, type UserData, type WatchedEpisode } from '@/types'
 
 export interface MiruStore {
   items: TrackedItem[]
@@ -35,7 +35,7 @@ function createMiruStore(): UseBoundStore<StoreApi<MiruStore>> {
 
     updateItem: (id, patch) =>
       set((s) => ({
-        items: s.items.map((i) => (i.id === id ? { ...i, ...patch } as TrackedItem : i)),
+        items: s.items.map((i) => (i.id === id ? TrackedItemSchema.parse({ ...i, ...patch }) : i)),
       })),
 
     markWatched: (itemId, episode) => {

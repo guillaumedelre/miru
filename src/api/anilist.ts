@@ -26,7 +26,7 @@ const AnilistMediaSchema = z.object({
   nextAiringEpisode: z.object({ episode: z.number(), airingAt: z.number() }).nullable(),
 })
 
-export type AnilistMedia = z.infer<typeof AnilistMediaSchema>
+export type AnilistMedia = z.infer<typeof AnilistMediaSchema> & { _source: 'anilist' }
 
 export interface AnilistSearchResult {
   media: AnilistMedia[]
@@ -54,7 +54,7 @@ export async function searchMedia(search: string, type: 'ANIME' | 'MANGA', page 
     }
   `, { search, type, page })
   return {
-    media: z.array(AnilistMediaSchema).parse(data.Page.media),
+    media: z.array(AnilistMediaSchema).parse(data.Page.media).map(m => ({ ...m, _source: 'anilist' as const })),
     hasMore: data.Page.pageInfo.hasNextPage,
   }
 }

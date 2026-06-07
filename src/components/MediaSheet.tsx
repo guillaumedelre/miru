@@ -11,6 +11,10 @@ import { stripHtml } from '@/lib/formatting'
 import { isAnimeItem, type TrackedItem, type Status } from '@/types'
 import { inferWatchStatus } from '@/lib/inferWatchStatus'
 
+function isAnilistDetails(d: AnilistMediaDetails | TmdbDetails | null): d is AnilistMediaDetails {
+  return d !== null && 'studios' in d
+}
+
 const ANILIST_STATUS: Record<string, string> = {
   FINISHED: 'Terminé',
   RELEASING: 'En cours',
@@ -68,9 +72,8 @@ export default function MediaSheet({ item, open, onClose, initialTab = 'info' }:
     onClose()
   }
 
-  const isAnilist = item.source === 'anilist'
-  const anilist = isAnilist ? (details as AnilistMediaDetails | null) : null
-  const tmdb = !isAnilist ? (details as TmdbDetails | null) : null
+  const anilist = isAnilistDetails(details) ? details : null
+  const tmdb = details !== null && !isAnilistDetails(details) ? details : null
 
   const title = anilist
     ? (anilist.title.english ?? anilist.title.romaji)
