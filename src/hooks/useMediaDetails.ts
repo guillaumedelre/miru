@@ -40,8 +40,7 @@ export function useMediaDetails(item: TrackedItem, open: boolean) {
       detailsCache.set(cacheKey, result)
       return result
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, item.sourceId, item.source, item.type])
+  }, [open, item.sourceId, item.source, item.type, run])
 
   return { details: info.details, watchProviders: info.watchProviders, loading }
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { getTvSeasons, type TmdbSeason, type TmdbEpisodeDetail } from '@/api/tmdb'
 import { getAnimeEpisodeCount } from '@/api/jikan'
 import { notifyApiError } from '@/lib/errors'
@@ -48,6 +48,8 @@ export function useSeasons({ sourceId, source, type, totalEpisodes, malId, onTot
   const [seasons, setSeasons] = useState<Season[]>([])
   const [loadingSeasons, setLoadingSeasons] = useState(false)
   const [resolvedTotal, setResolvedTotal] = useState<number | undefined>(totalEpisodes)
+  const onTotalResolvedRef = useRef(onTotalResolved)
+  useEffect(() => { onTotalResolvedRef.current = onTotalResolved })
 
   useEffect(() => {
     async function loadSeasons() {
@@ -82,7 +84,7 @@ export function useSeasons({ sourceId, source, type, totalEpisodes, malId, onTot
             if (count) {
               setResolvedTotal(count)
               setSeasons(buildVirtualSeasons(count))
-              onTotalResolved?.(count)
+              onTotalResolvedRef.current?.(count)
             }
           })
           .catch((err) => notifyApiError('useSeasons/jikan', err))
@@ -91,7 +93,6 @@ export function useSeasons({ sourceId, source, type, totalEpisodes, malId, onTot
     }
 
     loadSeasons()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceId, source, type, totalEpisodes, malId])
 
   return { seasons, setSeasons, loadingSeasons, resolvedTotal }
