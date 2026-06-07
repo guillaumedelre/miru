@@ -3,23 +3,12 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetClose, SheetBody } from '@/components/ui/sheet'
 import ProgressPicker from '@/components/ProgressPicker'
-import { getAnilistDetails, type AnilistMediaDetails } from '@/api/anilist'
-import { getTmdbDetails, getWatchProviders, posterUrl, type TmdbDetails, type TmdbWatchProviders } from '@/api/tmdb'
+import { type AnilistMediaDetails } from '@/api/anilist'
+import { posterUrl, type TmdbDetails } from '@/api/tmdb'
 import { useStore } from '@/store'
+import { useMediaDetails } from '@/hooks/useMediaDetails'
+import { stripHtml } from '@/lib/formatting'
 import type { TrackedItem, Status } from '@/types'
-
-function stripHtml(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .trim()
-}
 
 const ANILIST_STATUS: Record<string, string> = {
   FINISHED: 'Terminé',
@@ -40,50 +29,23 @@ interface Props {
 
 export default function MediaSheet({ item, open, onClose, initialTab = 'info' }: Props) {
   const { updateItem, setWatched, getWatchedForItem } = useStore()
+  const { details, watchProviders, loading: loadingInfo } = useMediaDetails(item, open)
 
-  // Info state
-  const [details, setDetails] = useState<AnilistMediaDetails | TmdbDetails | null>(null)
-  const [watchProviders, setWatchProviders] = useState<TmdbWatchProviders>({ providers: [], link: null })
-  const [loadingInfo, setLoadingInfo] = useState(false)
-
-  // Progress state
   const [checked, setChecked] = useState<Set<number>>(new Set())
   const [resolvedTotal, setResolvedTotal] = useState<number | undefined>(item.totalEpisodes)
-
-  // Tab state
   const [tab, setTab] = useState<Tab>(initialTab)
 
   const hasProgress = item.type !== 'movie'
 
   useEffect(() => {
-    if (!open) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTab(initialTab)
-    setChecked(new Set(getWatchedForItem(item.id)))
-    setResolvedTotal(item.totalEpisodes)
-
-    setDetails(null)
-    setWatchProviders({ providers: [], link: null })
-    setLoadingInfo(true)
-    const id = Number(item.sourceId)
-    const mediaType = item.type === 'series' ? 'tv' : 'movie'
-
-    if (item.source === 'anilist') {
-      getAnilistDetails(id)
-        .then(setDetails)
-        .catch(() => setDetails(null))
-        .finally(() => setLoadingInfo(false))
-    } else {
-      Promise.all([
-        getTmdbDetails(id, mediaType).catch(() => null),
-        getWatchProviders(id, mediaType).catch(() => ({ providers: [], link: null })),
-      ]).then(([det, prov]) => {
-        setDetails(det)
-        setWatchProviders(prov ?? { providers: [], link: null })
-      }).finally(() => setLoadingInfo(false))
+    function reset() {
+      setTab(initialTab)
+      setChecked(new Set(getWatchedForItem(item.id)))
+      setResolvedTotal(item.totalEpisodes)
     }
+    if (open) reset()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, item.sourceId, item.source, item.type])
+  }, [open, item.id])
 
   function handleSaveProgress() {
     const episodes = Array.from(checked)
@@ -108,7 +70,6 @@ export default function MediaSheet({ item, open, onClose, initialTab = 'info' }:
     onClose()
   }
 
-  // Computed info values
   const isAnilist = item.source === 'anilist'
   const anilist = isAnilist ? (details as AnilistMediaDetails | null) : null
   const tmdb = !isAnilist ? (details as TmdbDetails | null) : null
@@ -212,7 +173,7 @@ export default function MediaSheet({ item, open, onClose, initialTab = 'info' }:
         </div>
       )}
 
-      {/* Contenu de l'onglet Infos */}
+      {/* Onglet Infos */}
       {tab === 'info' && (
         <SheetBody className="px-6 py-6 space-y-6">
           {loadingInfo && <p className="text-sm text-muted-foreground text-center py-6">Chargement...</p>}
@@ -270,7 +231,7 @@ export default function MediaSheet({ item, open, onClose, initialTab = 'info' }:
         </SheetBody>
       )}
 
-      {/* Contenu de l'onglet Avancement */}
+      {/* Onglet Avancement */}
       {tab === 'progress' && (
         <>
           <SheetBody className="px-6 py-4">

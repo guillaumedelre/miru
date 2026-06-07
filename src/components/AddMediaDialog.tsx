@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useReducer, useEffect, useRef } from 'react'
 import { Sheet, SheetClose, SheetBody } from '@/components/ui/sheet'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -23,6 +23,91 @@ interface Pending {
   episodeDuration?: number
 }
 
+interface State {
+  tab: Tab
+  query: string
+  results: (AnilistMedia | TmdbMedia)[]
+  loading: boolean
+  pending: Pending | null
+  watchedEps: Set<number>
+}
+
+type Action =
+  | { type: 'CHANGE_TAB'; tab: Tab }
+  | { type: 'SET_QUERY'; query: string }
+  | { type: 'SEARCH_START' }
+  | { type: 'SEARCH_DONE'; results: (AnilistMedia | TmdbMedia)[] }
+  | { type: 'SELECT_RESULT'; pending: Pending }
+  | { type: 'SET_WATCHED_EPS'; watchedEps: Set<number> }
+  | { type: 'RESOLVE_TOTAL'; total: number }
+  | { type: 'BACK' }
+  | { type: 'RESET'; query: string }
+
+function makeInitialState(query: string): State {
+  return { tab: 'anime', query, results: [], loading: false, pending: null, watchedEps: new Set() }
+}
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case 'CHANGE_TAB':
+      return { ...state, tab: action.tab, results: [], pending: null, watchedEps: new Set() }
+    case 'SET_QUERY':
+      return { ...state, query: action.query }
+    case 'SEARCH_START':
+      return { ...state, loading: true }
+    case 'SEARCH_DONE':
+      return { ...state, loading: false, results: action.results }
+    case 'SELECT_RESULT':
+      return { ...state, pending: action.pending, watchedEps: new Set() }
+    case 'SET_WATCHED_EPS':
+      return { ...state, watchedEps: action.watchedEps }
+    case 'RESOLVE_TOTAL':
+      if (!state.pending) return state
+      return { ...state, pending: { ...state.pending, totalEpisodes: action.total } }
+    case 'BACK':
+      return { ...state, pending: null }
+    case 'RESET':
+      return makeInitialState(action.query)
+  }
+}
+
+async function resolveMediaMetadata(result: AnilistMedia | TmdbMedia, tab: Tab): Promise<Pending> {
+  const isAnilist = 'coverImage' in result
+  const title = isAnilist
+    ? ((result as AnilistMedia).title.english ?? (result as AnilistMedia).title.romaji)
+    : ((result as TmdbMedia).name ?? (result as TmdbMedia).title ?? '')
+  const image = isAnilist
+    ? (result as AnilistMedia).coverImage.large
+    : posterUrl((result as TmdbMedia).poster_path)
+  const source: Source = isAnilist ? 'anilist' : 'tmdb'
+
+  let totalEpisodes: number | undefined
+  let isFinished: boolean
+  let malId: number | undefined
+  let episodeDuration: number | undefined
+
+  if (isAnilist) {
+    const a = result as AnilistMedia
+    totalEpisodes = a.episodes ?? a.chapters ?? undefined
+    isFinished = a.status === 'FINISHED' || a.status === 'CANCELLED'
+    if (a.idMal) malId = a.idMal
+    if (a.duration) episodeDuration = a.duration
+  } else if (tab === 'series') {
+    const t = result as TmdbMedia
+    totalEpisodes = t.number_of_episodes
+    const details = await getTvSeasons(Number(result.id)).catch(() => null)
+    isFinished = details?.isFinished ?? false
+    if (details) totalEpisodes = details.seasons.reduce((s, season) => s + season.episode_count, 0)
+    if (t.episode_run_time?.length) episodeDuration = t.episode_run_time[0]
+  } else {
+    isFinished = true
+    const t = result as TmdbMedia
+    if (t.runtime) episodeDuration = t.runtime
+  }
+
+  return { result, title, image, totalEpisodes, source, type: tab as MediaType, isFinished, malId, episodeDuration }
+}
+
 interface Props {
   open: boolean
   onClose: () => void
@@ -31,82 +116,31 @@ interface Props {
 
 export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
   const { addItem, markWatched, items } = useStore()
-  const [tab, setTab] = useState<Tab>('anime')
-  const [query, setQuery] = useState(initialQuery ?? '')
-  const [results, setResults] = useState<(AnilistMedia | TmdbMedia)[]>([])
-  const [loading, setLoading] = useState(false)
-  const [pending, setPending] = useState<Pending | null>(null)
-  const [watchedEps, setWatchedEps] = useState<Set<number>>(new Set())
+  const [state, dispatch] = useReducer(reducer, makeInitialState(initialQuery ?? ''))
+  const { tab, query, results, loading, pending, watchedEps } = state
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!query.trim()) { setResults([]); return }
+    dispatch({ type: 'RESET', query: initialQuery ?? '' })
+  }, [open, initialQuery])
+
+  useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current)
+    if (!query.trim()) { dispatch({ type: 'SEARCH_DONE', results: [] }); return }
     debounce.current = setTimeout(async () => {
-      setLoading(true)
+      dispatch({ type: 'SEARCH_START' })
       try {
-        if (tab === 'anime') setResults(await searchMedia(query, 'ANIME'))
-        else setResults((await searchMulti(query)).filter(r => r.media_type === (tab === 'series' ? 'tv' : 'movie')))
+        if (tab === 'anime') dispatch({ type: 'SEARCH_DONE', results: await searchMedia(query, 'ANIME') })
+        else dispatch({ type: 'SEARCH_DONE', results: (await searchMulti(query)).filter(r => r.media_type === (tab === 'series' ? 'tv' : 'movie')) })
       } catch {
-        setResults([])
-      } finally {
-        setLoading(false)
+        dispatch({ type: 'SEARCH_DONE', results: [] })
       }
     }, 400)
   }, [query, tab])
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setQuery(initialQuery ?? '')
-    setResults([])
-    setPending(null)
-    setWatchedEps(new Set())
-  }, [open, initialQuery])
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setResults([])
-    setPending(null)
-    setWatchedEps(new Set())
-  }, [tab])
-
   async function handleSelect(result: AnilistMedia | TmdbMedia) {
-    const isAnilist = 'coverImage' in result
-    const title = isAnilist
-      ? ((result as AnilistMedia).title.english ?? (result as AnilistMedia).title.romaji)
-      : ((result as TmdbMedia).name ?? (result as TmdbMedia).title ?? '')
-    const image = isAnilist
-      ? (result as AnilistMedia).coverImage.large
-      : posterUrl((result as TmdbMedia).poster_path)
-    const source: Source = isAnilist ? 'anilist' : 'tmdb'
-
-    let totalEpisodes: number | undefined
-    let isFinished: boolean
-    let malId: number | undefined
-    let episodeDuration: number | undefined
-
-    if (isAnilist) {
-      const a = result as AnilistMedia
-      totalEpisodes = a.episodes ?? a.chapters ?? undefined
-      isFinished = a.status === 'FINISHED' || a.status === 'CANCELLED'
-      if (a.idMal) malId = a.idMal
-      if (a.duration) episodeDuration = a.duration
-    } else if (tab === 'series') {
-      const t = result as TmdbMedia
-      totalEpisodes = t.number_of_episodes
-      const details = await getTvSeasons(Number(result.id)).catch(() => null)
-      isFinished = details?.isFinished ?? false
-      if (details) totalEpisodes = details.seasons.reduce((s, season) => s + season.episode_count, 0)
-      if (t.episode_run_time?.length) episodeDuration = t.episode_run_time[0]
-    } else {
-      isFinished = true
-      const t = result as TmdbMedia
-      if (t.runtime) episodeDuration = t.runtime
-    }
-
-    setPending({ result, title, image, totalEpisodes, source, type: tab as MediaType, isFinished, malId, episodeDuration })
-    setWatchedEps(new Set())
+    const resolved = await resolveMediaMetadata(result, tab)
+    dispatch({ type: 'SELECT_RESULT', pending: resolved })
   }
 
   function handleConfirm() {
@@ -177,15 +211,15 @@ export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
                 totalEpisodes={pending.totalEpisodes}
                 malId={pending.malId}
                 checked={watchedEps}
-                onChange={setWatchedEps}
-                onTotalResolved={(total) => setPending((p) => p ? { ...p, totalEpisodes: total } : p)}
+                onChange={(eps) => dispatch({ type: 'SET_WATCHED_EPS', watchedEps: eps })}
+                onTotalResolved={(total) => dispatch({ type: 'RESOLVE_TOTAL', total })}
               />
             </SheetBody>
           )}
 
           {/* Footer */}
           <div className="shrink-0 flex gap-2 justify-end px-6 py-4 border-t border-border mt-auto">
-            <Button variant="ghost" onClick={() => setPending(null)}>Retour</Button>
+            <Button variant="ghost" onClick={() => dispatch({ type: 'BACK' })}>Retour</Button>
             <Button onClick={handleConfirm}>Ajouter</Button>
           </div>
         </>
@@ -194,7 +228,7 @@ export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
           {/* En-tête : titre + onglets + recherche */}
           <div className="shrink-0 px-6 pt-6 pb-4 border-b border-border space-y-4">
             <h2 className="text-base font-semibold pr-10">Ajouter un média</h2>
-            <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+            <Tabs value={tab} onValueChange={(v) => dispatch({ type: 'CHANGE_TAB', tab: v as Tab })}>
               <TabsList className="w-full">
                 <TabsTrigger value="anime" className="flex-1">Anime</TabsTrigger>
                 <TabsTrigger value="series" className="flex-1">Série</TabsTrigger>
@@ -204,7 +238,7 @@ export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
             <Input
               placeholder="Rechercher..."
               value={query}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch({ type: 'SET_QUERY', query: e.target.value })}
               autoFocus
             />
           </div>

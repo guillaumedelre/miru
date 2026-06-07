@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 const ENDPOINT = 'https://graphql.anilist.co'
 
 async function query<T>(q: string, variables: Record<string, unknown> = {}): Promise<T> {
@@ -11,21 +13,23 @@ async function query<T>(q: string, variables: Record<string, unknown> = {}): Pro
   return json.data
 }
 
-export interface AnilistMedia {
-  id: number
-  idMal: number | null
-  title: { romaji: string; english: string | null }
-  coverImage: { large: string }
-  episodes: number | null
-  chapters: number | null
-  duration: number | null
-  type: 'ANIME' | 'MANGA'
-  status: string
-  nextAiringEpisode: { episode: number; airingAt: number } | null
-}
+const AnilistMediaSchema = z.object({
+  id: z.number(),
+  idMal: z.number().nullable(),
+  title: z.object({ romaji: z.string(), english: z.string().nullable() }),
+  coverImage: z.object({ large: z.string() }),
+  episodes: z.number().nullable(),
+  chapters: z.number().nullable(),
+  duration: z.number().nullable(),
+  type: z.enum(['ANIME', 'MANGA']),
+  status: z.string(),
+  nextAiringEpisode: z.object({ episode: z.number(), airingAt: z.number() }).nullable(),
+})
+
+export type AnilistMedia = z.infer<typeof AnilistMediaSchema>
 
 export async function searchMedia(search: string, type: 'ANIME' | 'MANGA'): Promise<AnilistMedia[]> {
-  const data = await query<{ Page: { media: AnilistMedia[] } }>(`
+  const data = await query<{ Page: { media: unknown[] } }>(`
     query ($search: String, $type: MediaType) {
       Page(perPage: 50) {
         media(search: $search, type: $type) {
@@ -43,35 +47,39 @@ export async function searchMedia(search: string, type: 'ANIME' | 'MANGA'): Prom
       }
     }
   `, { search, type })
-  return data.Page.media
+  return z.array(AnilistMediaSchema).parse(data.Page.media)
 }
 
-export interface AnilistExternalLink {
-  url: string
-  site: string
-  type: string
-  icon: string | null
-  color: string | null
-}
+const AnilistExternalLinkSchema = z.object({
+  url: z.string(),
+  site: z.string(),
+  type: z.string(),
+  icon: z.string().nullable(),
+  color: z.string().nullable(),
+})
 
-export interface AnilistMediaDetails {
-  id: number
-  title: { romaji: string; english: string | null }
-  description: string | null
-  coverImage: { extraLarge: string; large: string }
-  bannerImage: string | null
-  genres: string[]
-  averageScore: number | null
-  episodes: number | null
-  duration: number | null
-  status: string
-  startDate: { year: number | null }
-  studios: { nodes: { name: string }[] }
-  externalLinks: AnilistExternalLink[]
-}
+export type AnilistExternalLink = z.infer<typeof AnilistExternalLinkSchema>
+
+const AnilistMediaDetailsSchema = z.object({
+  id: z.number(),
+  title: z.object({ romaji: z.string(), english: z.string().nullable() }),
+  description: z.string().nullable(),
+  coverImage: z.object({ extraLarge: z.string(), large: z.string() }),
+  bannerImage: z.string().nullable(),
+  genres: z.array(z.string()),
+  averageScore: z.number().nullable(),
+  episodes: z.number().nullable(),
+  duration: z.number().nullable(),
+  status: z.string(),
+  startDate: z.object({ year: z.number().nullable() }),
+  studios: z.object({ nodes: z.array(z.object({ name: z.string() })) }),
+  externalLinks: z.array(AnilistExternalLinkSchema),
+})
+
+export type AnilistMediaDetails = z.infer<typeof AnilistMediaDetailsSchema>
 
 export async function getAnilistDetails(id: number): Promise<AnilistMediaDetails> {
-  const data = await query<{ Media: AnilistMediaDetails }>(`
+  const data = await query<{ Media: unknown }>(`
     query ($id: Int) {
       Media(id: $id) {
         id
@@ -90,8 +98,14 @@ export async function getAnilistDetails(id: number): Promise<AnilistMediaDetails
       }
     }
   `, { id })
-  return data.Media
+  return AnilistMediaDetailsSchema.parse(data.Media)
 }
+
+const AiringSlotSchema = z.object({
+  mediaId: z.number(),
+  episode: z.number(),
+  airingAt: z.number(),
+})
 
 export async function getAiringSchedule(
   mediaIds: number[],
@@ -104,7 +118,7 @@ export async function getAiringSchedule(
   const airingAt_greater = from ?? now - 7 * 24 * 60 * 60
   const airingAt_lesser = to ?? now + 7 * 24 * 60 * 60
 
-  const data = await query<{ Page: { airingSchedules: { mediaId: number; episode: number; airingAt: number }[] } }>(`
+  const data = await query<{ Page: { airingSchedules: unknown[] } }>(`
     query ($mediaId_in: [Int], $airingAt_greater: Int, $airingAt_lesser: Int) {
       Page(perPage: 50) {
         airingSchedules(
@@ -120,7 +134,7 @@ export async function getAiringSchedule(
     }
   `, { mediaId_in: mediaIds, airingAt_greater, airingAt_lesser })
 
-  return data.Page.airingSchedules
+  return z.array(AiringSlotSchema).parse(data.Page.airingSchedules)
 }
 
 export async function getAnilistGenresBatch(ids: number[]): Promise<Record<number, string[]>> {

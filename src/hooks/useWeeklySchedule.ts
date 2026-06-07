@@ -1,9 +1,32 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useStore } from '@/store'
 import { getAiringSchedule } from '@/api/anilist'
 import { getNextEpisode } from '@/api/tmdb'
 import { getEpisodeName } from '@/api/jikan'
+import { notifyEnrichment } from '@/lib/errors'
 import type { MediaType } from '@/types'
+
+type AiringSlot = { mediaId: number; episode: number; airingAt: number }
+
+// Module-level caches — partagés entre les instances du hook (WeekView et ToWatch)
+const anilistScheduleCache = new Map<string, Promise<AiringSlot[]>>()
+const tmdbNextEpisodeCache = new Map<string, ReturnType<typeof getNextEpisode>>()
+
+function cachedAiringSchedule(ids: number[], weekStart: number, weekEnd: number): Promise<AiringSlot[]> {
+  const key = `${[...ids].sort().join(',')}-${weekStart}-${weekEnd}`
+  if (!anilistScheduleCache.has(key)) {
+    anilistScheduleCache.set(key, getAiringSchedule(ids, weekStart, weekEnd).catch(() => []))
+  }
+  return anilistScheduleCache.get(key)!
+}
+
+function cachedNextEpisode(sourceId: string, progress: number): ReturnType<typeof getNextEpisode> {
+  const key = `${sourceId}-${progress}`
+  if (!tmdbNextEpisodeCache.has(key)) {
+    tmdbNextEpisodeCache.set(key, getNextEpisode(Number(sourceId), progress))
+  }
+  return tmdbNextEpisodeCache.get(key)!
+}
 
 export interface WeeklyEpisode {
   itemId: string
@@ -40,24 +63,42 @@ export function useWeeklySchedule(weekOffset = 0) {
 
   const weekDates = useMemo(() => getWeekDates(weekOffset), [weekOffset])
 
+  // Clé stable : ne change que si les items watching (ids + progress) changent vraiment
+  const watchingKey = useMemo(() => {
+    return items
+      .filter(i => i.status === 'watching')
+      .map(i => `${i.id}:${i.progress}`)
+      .sort()
+      .join('|')
+  }, [items])
+
+  const prevKeyRef = useRef<string | null>(null)
+
   useEffect(() => {
-    const watching = items.filter((i) => i.status === 'watching')
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (watching.length === 0) { setSchedule(new Map()); return }
+    async function fetchSchedule() {
+      const watching = items.filter((i) => i.status === 'watching')
+      if (watching.length === 0) {
+        setSchedule(new Map())
+        prevKeyRef.current = watchingKey
+        return
+      }
 
-    setLoading(true)
+      // Évite un re-fetch si rien de pertinent n'a changé (ex: item non-watching modifié)
+      if (prevKeyRef.current === watchingKey) return
+      prevKeyRef.current = watchingKey
 
-    async function fetch() {
+      setLoading(true)
+
       const map = new Map<string, WeeklyEpisode[]>()
       weekDates.forEach((d) => map.set(d, []))
 
-      // AniList anime
+      // AniList anime — batch unique, résultat mis en cache par (ids + semaine)
       const anilistItems = watching.filter((i) => i.source === 'anilist' && i.type === 'anime')
       if (anilistItems.length > 0) {
         const ids = anilistItems.map((i) => Number(i.sourceId))
         const weekStart = Math.floor(new Date(weekDates[0]).getTime() / 1000)
         const weekEnd = Math.floor(new Date(weekDates[6] + 'T23:59:59').getTime() / 1000)
-        const schedules = await getAiringSchedule(ids, weekStart, weekEnd).catch(() => [])
+        const schedules = await cachedAiringSchedule(ids, weekStart, weekEnd)
 
         await Promise.allSettled(
           schedules.map(async (s) => {
@@ -66,10 +107,9 @@ export function useWeeklySchedule(weekOffset = 0) {
             const item = anilistItems.find((i) => i.sourceId === String(s.mediaId))
             if (!item) return
 
-            // Nom de l'épisode via Jikan si malId disponible
             let episodeName: string | undefined
             if (item.malId) {
-              episodeName = (await getEpisodeName(item.malId, s.episode).catch(() => null)) ?? undefined
+              episodeName = (await getEpisodeName(item.malId, s.episode).catch((err) => { notifyEnrichment('useWeeklySchedule/jikan', err); return null })) ?? undefined
             }
 
             map.get(date)!.push({
@@ -85,11 +125,11 @@ export function useWeeklySchedule(weekOffset = 0) {
         )
       }
 
-      // TMDB series
+      // TMDB series — un appel par item, mis en cache par (sourceId + progress)
       const tmdbItems = watching.filter((i) => i.source === 'tmdb' && i.type === 'series')
       await Promise.allSettled(
         tmdbItems.map(async (item) => {
-          const ep = await getNextEpisode(Number(item.sourceId), item.progress)
+          const ep = await cachedNextEpisode(item.sourceId, item.progress).catch(() => null)
           if (!ep?.air_date) return
           if (!weekDates.includes(ep.air_date)) return
           map.get(ep.air_date)!.push({
@@ -109,8 +149,8 @@ export function useWeeklySchedule(weekOffset = 0) {
       setLoading(false)
     }
 
-    fetch()
-  }, [items, weekDates, weekOffset])
+    fetchSchedule()
+  }, [watchingKey, weekDates, items])
 
   return { schedule, weekDates, loading }
 }

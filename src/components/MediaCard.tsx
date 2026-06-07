@@ -7,12 +7,7 @@ import { type MaskedImageVariant } from '@/components/ui/masked-image'
 import MediaSheet from '@/components/MediaSheet'
 import { useStore } from '@/store'
 import type { TrackedItem } from '@/types'
-
-const TYPE_LABELS: Record<string, string> = {
-  anime: 'Anime',
-  series: 'Série',
-  movie: 'Film',
-}
+import { TYPE_LABEL } from '@/config/constants'
 
 const MASK_MAP: Record<MaskedImageVariant, string> = {
   shape1: '/mask-shape-1.svg',
@@ -75,7 +70,7 @@ export default function MediaCard({ item, flipped = false, onFlip }: Props) {
               />
               <div className="absolute inset-0 bg-black/50" />
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center">
-                <Badge variant="secondary" className="text-xs">{TYPE_LABELS[item.type]}</Badge>
+                <Badge variant="secondary" className="text-xs">{TYPE_LABEL[item.type]}</Badge>
                 <p className="text-white font-bold text-sm leading-tight line-clamp-3 drop-shadow-md">
                   {item.title}
                 </p>

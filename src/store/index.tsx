@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { create, type UseBoundStore, type StoreApi } from 'zustand'
 import { loadUserData, saveUserData } from '@/lib/firestore'
+import { notifyError } from '@/lib/errors'
 import type { TrackedItem, WatchedEpisode } from '@/types'
 
 export interface MiruStore {
@@ -77,7 +78,7 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       .then((data) => {
         if (data) store.setState({ items: data.items, watched: data.watched })
       })
-      .catch(() => {})
+      .catch((err) => notifyError('Impossible de charger ta médiathèque.', err))
       .finally(() => setReady(true))
 
     // Sauvegarde dans Firestore à chaque changement (débounce 1.5s)
@@ -85,7 +86,8 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
     const unsub = store.subscribe((state) => {
       clearTimeout(timeout)
       timeout = setTimeout(() => {
-        saveUserData(userId, { items: state.items, watched: state.watched }).catch(() => {})
+        saveUserData(userId, { items: state.items, watched: state.watched })
+          .catch((err) => notifyError('La sauvegarde a échoué.', err))
       }, 1500)
     })
 

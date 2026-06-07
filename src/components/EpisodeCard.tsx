@@ -1,12 +1,7 @@
 import { Checkbox } from '@/components/ui/checkbox'
 import { useStore } from '@/store'
 import type { WeeklyEpisode } from '@/hooks/useWeeklySchedule'
-
-const TYPE_LABELS: Record<string, string> = {
-  anime: 'Anime',
-  series: 'Série',
-  movie: 'Film',
-}
+import { TYPE_LABEL } from '@/config/constants'
 
 interface Props {
   episode: WeeklyEpisode
@@ -31,7 +26,7 @@ export default function EpisodeCard({ episode }: Props) {
       <div className="flex flex-col gap-1 flex-1 min-w-0">
         <p className="text-xs font-semibold leading-tight line-clamp-2">{episode.title}</p>
         <p className="text-xs text-muted-foreground">
-          {TYPE_LABELS[episode.type]}
+          {TYPE_LABEL[episode.type]}
           {episode.season != null && ` · S${episode.season}`}
           &nbsp;&middot; Ep.&nbsp;{episode.episode}
         </p>
