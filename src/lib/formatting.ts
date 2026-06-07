@@ -3,9 +3,9 @@ export function formatDuration(minutes: number): string {
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
   if (h < 24) return m > 0 ? `${h}h ${m}min` : `${h}h`
-  const d = Math.floor(h / 24)
-  const rh = h % 24
-  return rh > 0 ? `${d}j ${rh}h` : `${d}j`
+  const days = Math.floor(h / 24)
+  const remainingHours = h % 24
+  return remainingHours > 0 ? `${days}j ${remainingHours}h` : `${days}j`
 }
 
 export function formatDay(dateStr: string): string {

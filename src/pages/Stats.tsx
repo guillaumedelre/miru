@@ -90,7 +90,7 @@ export default function Stats() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8)
 
-  const maxGenreCount = topGenres[0]?.[1] ?? 1
+  const topGenreCount = topGenres[0]?.[1] ?? 1
 
   return (
     <div className="space-y-6">
@@ -161,7 +161,7 @@ export default function Stats() {
             <div className="flex-1 bg-muted rounded-full h-2">
               <div
                 className="bg-primary h-2 rounded-full transition-all"
-                style={{ width: `${Math.round((count / maxGenreCount) * 100)}%` }}
+                style={{ width: `${Math.round((count / topGenreCount) * 100)}%` }}
               />
             </div>
             <span className="text-sm font-semibold w-6 text-right shrink-0">{count}</span>
