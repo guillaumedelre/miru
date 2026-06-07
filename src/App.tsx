@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { BrowserRouter, NavLink, Route, Routes, Navigate, useLocation } from 'react-router-dom'
-import { LogOut, CalendarDays, LayoutGrid, BarChart3, UserCircle, Tv } from 'lucide-react'
+import { LogOut, CalendarDays, LayoutGrid, BarChart3, UserCircle, Tv, type LucideIcon } from 'lucide-react'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { TopbarActionsProvider, useTopbarActions } from '@/contexts/TopbarActionsContext'
 import { StoreProvider } from '@/store'
@@ -20,10 +20,56 @@ const PAGE_TITLES: Record<string, string> = {
   '/stats': 'Statistiques',
 }
 
-const NAV_LINK_CLASS = ({ isActive }: { isActive: boolean }) =>
-  `flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-    isActive ? 'font-semibold bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-  }`
+interface NavItemDef {
+  to: string
+  end?: boolean
+  icon: LucideIcon
+  label: string
+  shortLabel?: string
+}
+
+const NAV_ITEMS: NavItemDef[] = [
+  { to: '/to-watch', icon: Tv, label: 'À voir' },
+  { to: '/library', icon: LayoutGrid, label: 'Médiathèque' },
+  { to: '/', end: true, icon: CalendarDays, label: 'Calendrier' },
+  { to: '/stats', icon: BarChart3, label: 'Statistiques', shortLabel: 'Stats' },
+]
+
+function DesktopNavItem({ to, end, icon: Icon, label }: NavItemDef) {
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      className={({ isActive }) =>
+        `flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+          isActive ? 'font-semibold bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+        }`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <Icon size={16} className={isActive ? 'text-primary' : ''} />
+          {label}
+        </>
+      )}
+    </NavLink>
+  )
+}
+
+function MobileNavItem({ to, end, icon: Icon, label, shortLabel }: NavItemDef) {
+  return (
+    <NavLink to={to} end={end} className="flex-1 flex flex-col items-center py-2 gap-0.5">
+      {({ isActive }) => (
+        <>
+          <Icon className={`size-5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+          <span className={`text-[10px] ${isActive ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>
+            {shortLabel ?? label}
+          </span>
+        </>
+      )}
+    </NavLink>
+  )
+}
 
 function AppShell() {
   const { user, loading, logout } = useAuth()
@@ -64,18 +110,7 @@ function AppShell() {
 
         {/* Navigation - desktop */}
         <div className="hidden sm:flex gap-1 items-center">
-          <NavLink to="/to-watch" className={NAV_LINK_CLASS}>
-            {({ isActive }) => <><Tv size={16} className={isActive ? 'text-primary' : ''} />À voir</>}
-          </NavLink>
-          <NavLink to="/library" className={NAV_LINK_CLASS}>
-            {({ isActive }) => <><LayoutGrid size={16} className={isActive ? 'text-primary' : ''} />Médiathèque</>}
-          </NavLink>
-          <NavLink to="/" end className={NAV_LINK_CLASS}>
-            {({ isActive }) => <><CalendarDays size={16} className={isActive ? 'text-primary' : ''} />Calendrier</>}
-          </NavLink>
-          <NavLink to="/stats" className={NAV_LINK_CLASS}>
-            {({ isActive }) => <><BarChart3 size={16} className={isActive ? 'text-primary' : ''} />Statistiques</>}
-          </NavLink>
+          {NAV_ITEMS.map(item => <DesktopNavItem key={item.to} {...item} />)}
         </div>
 
         {/* Actions contextuelles (slot injecté par la page courante) - mobile uniquement */}
@@ -112,38 +147,7 @@ function AppShell() {
 
       {/* Navigation mobile bas d'écran */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border flex z-40">
-        <NavLink to="/to-watch" className="flex-1 flex flex-col items-center py-2 gap-0.5">
-          {({ isActive }) => (
-            <>
-              <Tv className={`size-5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
-              <span className={`text-[10px] ${isActive ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>À voir</span>
-            </>
-          )}
-        </NavLink>
-        <NavLink to="/library" className="flex-1 flex flex-col items-center py-2 gap-0.5">
-          {({ isActive }) => (
-            <>
-              <LayoutGrid className={`size-5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
-              <span className={`text-[10px] ${isActive ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>Médiathèque</span>
-            </>
-          )}
-        </NavLink>
-        <NavLink to="/" end className="flex-1 flex flex-col items-center py-2 gap-0.5">
-          {({ isActive }) => (
-            <>
-              <CalendarDays className={`size-5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
-              <span className={`text-[10px] ${isActive ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>Calendrier</span>
-            </>
-          )}
-        </NavLink>
-        <NavLink to="/stats" className="flex-1 flex flex-col items-center py-2 gap-0.5">
-          {({ isActive }) => (
-            <>
-              <BarChart3 className={`size-5 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
-              <span className={`text-[10px] ${isActive ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>Stats</span>
-            </>
-          )}
-        </NavLink>
+        {NAV_ITEMS.map(item => <MobileNavItem key={item.to} {...item} />)}
         <button
           onClick={() => setConfirmLogoutOpen(true)}
           className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-muted-foreground hover:text-foreground transition-colors"
