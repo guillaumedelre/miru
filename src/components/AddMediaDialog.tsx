@@ -23,6 +23,43 @@ interface Pending {
   episodeDuration?: number
 }
 
+async function resolveMediaMetadata(result: AnilistMedia | TmdbMedia, tab: Tab): Promise<Pending> {
+  const isAnilist = 'coverImage' in result
+  const title = isAnilist
+    ? ((result as AnilistMedia).title.english ?? (result as AnilistMedia).title.romaji)
+    : ((result as TmdbMedia).name ?? (result as TmdbMedia).title ?? '')
+  const image = isAnilist
+    ? (result as AnilistMedia).coverImage.large
+    : posterUrl((result as TmdbMedia).poster_path)
+  const source: Source = isAnilist ? 'anilist' : 'tmdb'
+
+  let totalEpisodes: number | undefined
+  let isFinished: boolean
+  let malId: number | undefined
+  let episodeDuration: number | undefined
+
+  if (isAnilist) {
+    const a = result as AnilistMedia
+    totalEpisodes = a.episodes ?? a.chapters ?? undefined
+    isFinished = a.status === 'FINISHED' || a.status === 'CANCELLED'
+    if (a.idMal) malId = a.idMal
+    if (a.duration) episodeDuration = a.duration
+  } else if (tab === 'series') {
+    const t = result as TmdbMedia
+    totalEpisodes = t.number_of_episodes
+    const details = await getTvSeasons(Number(result.id)).catch(() => null)
+    isFinished = details?.isFinished ?? false
+    if (details) totalEpisodes = details.seasons.reduce((s, season) => s + season.episode_count, 0)
+    if (t.episode_run_time?.length) episodeDuration = t.episode_run_time[0]
+  } else {
+    isFinished = true
+    const t = result as TmdbMedia
+    if (t.runtime) episodeDuration = t.runtime
+  }
+
+  return { result, title, image, totalEpisodes, source, type: tab as MediaType, isFinished, malId, episodeDuration }
+}
+
 interface Props {
   open: boolean
   onClose: () => void
@@ -72,40 +109,8 @@ export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
   }, [tab])
 
   async function handleSelect(result: AnilistMedia | TmdbMedia) {
-    const isAnilist = 'coverImage' in result
-    const title = isAnilist
-      ? ((result as AnilistMedia).title.english ?? (result as AnilistMedia).title.romaji)
-      : ((result as TmdbMedia).name ?? (result as TmdbMedia).title ?? '')
-    const image = isAnilist
-      ? (result as AnilistMedia).coverImage.large
-      : posterUrl((result as TmdbMedia).poster_path)
-    const source: Source = isAnilist ? 'anilist' : 'tmdb'
-
-    let totalEpisodes: number | undefined
-    let isFinished: boolean
-    let malId: number | undefined
-    let episodeDuration: number | undefined
-
-    if (isAnilist) {
-      const a = result as AnilistMedia
-      totalEpisodes = a.episodes ?? a.chapters ?? undefined
-      isFinished = a.status === 'FINISHED' || a.status === 'CANCELLED'
-      if (a.idMal) malId = a.idMal
-      if (a.duration) episodeDuration = a.duration
-    } else if (tab === 'series') {
-      const t = result as TmdbMedia
-      totalEpisodes = t.number_of_episodes
-      const details = await getTvSeasons(Number(result.id)).catch(() => null)
-      isFinished = details?.isFinished ?? false
-      if (details) totalEpisodes = details.seasons.reduce((s, season) => s + season.episode_count, 0)
-      if (t.episode_run_time?.length) episodeDuration = t.episode_run_time[0]
-    } else {
-      isFinished = true
-      const t = result as TmdbMedia
-      if (t.runtime) episodeDuration = t.runtime
-    }
-
-    setPending({ result, title, image, totalEpisodes, source, type: tab as MediaType, isFinished, malId, episodeDuration })
+    const pending = await resolveMediaMetadata(result, tab)
+    setPending(pending)
     setWatchedEps(new Set())
   }
 
