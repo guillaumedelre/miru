@@ -28,10 +28,16 @@ const AnilistMediaSchema = z.object({
 
 export type AnilistMedia = z.infer<typeof AnilistMediaSchema>
 
-export async function searchMedia(search: string, type: 'ANIME' | 'MANGA'): Promise<AnilistMedia[]> {
-  const data = await query<{ Page: { media: unknown[] } }>(`
-    query ($search: String, $type: MediaType) {
-      Page(perPage: 50) {
+export interface AnilistSearchResult {
+  media: AnilistMedia[]
+  hasMore: boolean
+}
+
+export async function searchMedia(search: string, type: 'ANIME' | 'MANGA', page = 1): Promise<AnilistSearchResult> {
+  const data = await query<{ Page: { media: unknown[]; pageInfo: { hasNextPage: boolean } } }>(`
+    query ($search: String, $type: MediaType, $page: Int) {
+      Page(page: $page, perPage: 20) {
+        pageInfo { hasNextPage }
         media(search: $search, type: $type) {
           id
           idMal
@@ -46,8 +52,11 @@ export async function searchMedia(search: string, type: 'ANIME' | 'MANGA'): Prom
         }
       }
     }
-  `, { search, type })
-  return z.array(AnilistMediaSchema).parse(data.Page.media)
+  `, { search, type, page })
+  return {
+    media: z.array(AnilistMediaSchema).parse(data.Page.media),
+    hasMore: data.Page.pageInfo.hasNextPage,
+  }
 }
 
 const AnilistExternalLinkSchema = z.object({

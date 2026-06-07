@@ -5,7 +5,8 @@ import {
   getWatchProviders,
   getTvSeasons,
   getSeasonEpisodes,
-  searchMulti,
+  searchTv,
+  searchMovie,
   getNextEpisode,
   posterUrl,
 } from '@/api/tmdb'
@@ -132,28 +133,37 @@ describe('getSeasonEpisodes', () => {
   })
 })
 
-describe('searchMulti', () => {
-  it('returns only movie/tv results', async () => {
-    const result = await searchMulti('breaking')
-    expect(result.every(r => r.media_type === 'movie' || r.media_type === 'tv')).toBe(true)
-    expect(result).toHaveLength(2)
+
+describe('searchTv', () => {
+  it('returns results with media_type=tv and hasMore based on total_pages', async () => {
+    const { results, hasMore } = await searchTv('breaking')
+    expect(results).toHaveLength(1)
+    expect(results[0].media_type).toBe('tv')
+    expect(results[0].id).toBe(1396)
+    expect(hasMore).toBe(true)
   })
 
-  it('skips items that fail safeParse (missing poster_path)', async () => {
+  it('returns hasMore=false when on last page', async () => {
     server.use(
-      http.get(`${BASE}/search/multi`, () =>
+      http.get(`${BASE}/search/tv`, () =>
         HttpResponse.json({
-          results: [
-            { id: 1, media_type: 'tv', name: 'Valid Show', poster_path: '/poster.jpg' },
-            { id: 2, media_type: 'person', name: 'Some Actor' },
-            { id: 3, media_type: 'tv' },
-          ],
+          results: [{ id: 1, name: 'Show', poster_path: '/p.jpg' }],
+          page: 3, total_pages: 3,
         })
       )
     )
-    const result = await searchMulti('test')
-    expect(result).toHaveLength(1)
-    expect(result[0].id).toBe(1)
+    const { hasMore } = await searchTv('show', 3)
+    expect(hasMore).toBe(false)
+  })
+})
+
+describe('searchMovie', () => {
+  it('returns results with media_type=movie and hasMore=false', async () => {
+    const { results, hasMore } = await searchMovie('fight')
+    expect(results).toHaveLength(1)
+    expect(results[0].media_type).toBe('movie')
+    expect(results[0].id).toBe(550)
+    expect(hasMore).toBe(false)
   })
 })
 

@@ -5,12 +5,13 @@ import { searchMedia, getAnilistDetails, getAiringSchedule, getAnilistGenresBatc
 const ANILIST_ENDPOINT = 'https://graphql.anilist.co'
 
 describe('searchMedia', () => {
-  it('parses returned media array', async () => {
+  it('parses returned media array and hasMore=false', async () => {
     server.use(
       http.post(ANILIST_ENDPOINT, async () =>
         HttpResponse.json({
           data: {
             Page: {
+              pageInfo: { hasNextPage: false },
               media: [
                 {
                   id: 1,
@@ -31,21 +32,41 @@ describe('searchMedia', () => {
       )
     )
 
-    const results = await searchMedia('Naruto', 'ANIME')
+    const { media, hasMore } = await searchMedia('Naruto', 'ANIME')
 
-    expect(results).toHaveLength(1)
-    expect(results[0]).toMatchObject({
+    expect(media).toHaveLength(1)
+    expect(media[0]).toMatchObject({
       id: 1,
       idMal: 42,
       title: { romaji: 'Naruto', english: 'Naruto' },
-      coverImage: { large: 'https://img.example.com/naruto.jpg' },
-      episodes: 220,
-      chapters: null,
-      duration: 23,
-      type: 'ANIME',
-      status: 'FINISHED',
-      nextAiringEpisode: null,
     })
+    expect(hasMore).toBe(false)
+  })
+
+  it('returns hasMore=true when pageInfo.hasNextPage is true', async () => {
+    server.use(
+      http.post(ANILIST_ENDPOINT, async () =>
+        HttpResponse.json({
+          data: {
+            Page: {
+              pageInfo: { hasNextPage: true },
+              media: [
+                {
+                  id: 2, idMal: null,
+                  title: { romaji: 'One Piece', english: 'One Piece' },
+                  coverImage: { large: 'https://img.example.com/op.jpg' },
+                  episodes: null, chapters: null, duration: 24,
+                  type: 'ANIME', status: 'RELEASING', nextAiringEpisode: null,
+                },
+              ],
+            },
+          },
+        })
+      )
+    )
+
+    const { hasMore } = await searchMedia('One Piece', 'ANIME', 1)
+    expect(hasMore).toBe(true)
   })
 
   it('throws when GraphQL returns errors', async () => {
@@ -64,6 +85,7 @@ describe('searchMedia', () => {
         HttpResponse.json({
           data: {
             Page: {
+              pageInfo: { hasNextPage: false },
               media: [{ id: 'not-a-number', title: null }],
             },
           },

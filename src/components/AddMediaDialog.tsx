@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import ProgressPicker from '@/components/ProgressPicker'
 import { useStore } from '@/store'
 import { searchMedia, type AnilistMedia } from '@/api/anilist'
-import { searchMulti, type TmdbMedia } from '@/api/tmdb'
+import { searchTv, searchMovie, type TmdbMedia } from '@/api/tmdb'
 import { resolveMediaMetadata, extractDisplayInfo, type MediaMetadata } from '@/api/adapters'
 import type { TrackedItem, AnimeItem, SeriesItem, MovieItem } from '@/types'
 
@@ -21,13 +21,14 @@ interface State {
   loading: boolean
   pending: Pending | null
   watchedEps: Set<number>
+  hasMore: boolean
 }
 
 type Action =
   | { type: 'CHANGE_TAB'; tab: Tab }
   | { type: 'SET_QUERY'; query: string }
   | { type: 'SEARCH_START' }
-  | { type: 'SEARCH_DONE'; results: (AnilistMedia | TmdbMedia)[] }
+  | { type: 'SEARCH_DONE'; results: (AnilistMedia | TmdbMedia)[]; hasMore: boolean; append: boolean }
   | { type: 'SELECT_RESULT'; pending: Pending }
   | { type: 'SET_WATCHED_EPS'; watchedEps: Set<number> }
   | { type: 'RESOLVE_TOTAL'; total: number }
@@ -35,19 +36,24 @@ type Action =
   | { type: 'RESET'; query: string }
 
 function makeInitialState(query: string): State {
-  return { tab: 'anime', query, results: [], loading: false, pending: null, watchedEps: new Set() }
+  return { tab: 'anime', query, results: [], loading: false, pending: null, watchedEps: new Set(), hasMore: false }
 }
 
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case 'CHANGE_TAB':
-      return { ...state, tab: action.tab, results: [], pending: null, watchedEps: new Set() }
+      return { ...state, tab: action.tab, results: [], pending: null, watchedEps: new Set(), hasMore: false }
     case 'SET_QUERY':
       return { ...state, query: action.query }
     case 'SEARCH_START':
       return { ...state, loading: true }
     case 'SEARCH_DONE':
-      return { ...state, loading: false, results: action.results }
+      return {
+        ...state,
+        loading: false,
+        results: action.append ? [...state.results, ...action.results] : action.results,
+        hasMore: action.hasMore,
+      }
     case 'SELECT_RESULT':
       return { ...state, pending: action.pending, watchedEps: new Set() }
     case 'SET_WATCHED_EPS':
@@ -62,7 +68,6 @@ function reducer(state: State, action: Action): State {
   }
 }
 
-
 interface Props {
   open: boolean
   onClose: () => void
@@ -72,8 +77,9 @@ interface Props {
 export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
   const { addItem, markWatched, items } = useStore()
   const [state, dispatch] = useReducer(reducer, makeInitialState(initialQuery ?? ''))
-  const { tab, query, results, loading, pending, watchedEps } = state
+  const { tab, query, results, loading, pending, watchedEps, hasMore } = state
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pageRef = useRef(1)
 
   useEffect(() => {
     dispatch({ type: 'RESET', query: initialQuery ?? '' })
@@ -81,17 +87,46 @@ export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
 
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current)
-    if (!query.trim()) { dispatch({ type: 'SEARCH_DONE', results: [] }); return }
+    if (!query.trim()) { dispatch({ type: 'SEARCH_DONE', results: [], hasMore: false, append: false }); return }
     debounce.current = setTimeout(async () => {
+      pageRef.current = 1
       dispatch({ type: 'SEARCH_START' })
       try {
-        if (tab === 'anime') dispatch({ type: 'SEARCH_DONE', results: await searchMedia(query, 'ANIME') })
-        else dispatch({ type: 'SEARCH_DONE', results: (await searchMulti(query)).filter(r => r.media_type === (tab === 'series' ? 'tv' : 'movie')) })
+        if (tab === 'anime') {
+          const { media, hasMore } = await searchMedia(query, 'ANIME', 1)
+          dispatch({ type: 'SEARCH_DONE', results: media, hasMore, append: false })
+        } else if (tab === 'series') {
+          const { results, hasMore } = await searchTv(query, 1)
+          dispatch({ type: 'SEARCH_DONE', results, hasMore, append: false })
+        } else {
+          const { results, hasMore } = await searchMovie(query, 1)
+          dispatch({ type: 'SEARCH_DONE', results, hasMore, append: false })
+        }
       } catch {
-        dispatch({ type: 'SEARCH_DONE', results: [] })
+        dispatch({ type: 'SEARCH_DONE', results: [], hasMore: false, append: false })
       }
     }, 400)
   }, [query, tab])
+
+  async function handleLoadMore() {
+    const nextPage = pageRef.current + 1
+    pageRef.current = nextPage
+    dispatch({ type: 'SEARCH_START' })
+    try {
+      if (tab === 'anime') {
+        const { media, hasMore } = await searchMedia(query, 'ANIME', nextPage)
+        dispatch({ type: 'SEARCH_DONE', results: media, hasMore, append: true })
+      } else if (tab === 'series') {
+        const { results, hasMore } = await searchTv(query, nextPage)
+        dispatch({ type: 'SEARCH_DONE', results, hasMore, append: true })
+      } else {
+        const { results, hasMore } = await searchMovie(query, nextPage)
+        dispatch({ type: 'SEARCH_DONE', results, hasMore, append: true })
+      }
+    } catch {
+      dispatch({ type: 'SEARCH_DONE', results: [], hasMore: false, append: true })
+    }
+  }
 
   async function handleSelect(result: AnilistMedia | TmdbMedia) {
     const meta = await resolveMediaMetadata(result, tab)
@@ -206,7 +241,9 @@ export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
 
           {/* Résultats scrollables */}
           <SheetBody className="px-6 py-4 space-y-2">
-            {loading && <p className="text-sm text-muted-foreground text-center py-6">Recherche...</p>}
+            {loading && results.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-6">Recherche...</p>
+            )}
             {!loading && results.length === 0 && query.trim() && (
               <p className="text-sm text-muted-foreground text-center py-6">Aucun résultat</p>
             )}
@@ -232,6 +269,14 @@ export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
                 </Button>
               )
             })}
+            {hasMore && !loading && (
+              <Button variant="outline" className="w-full mt-2" onClick={handleLoadMore}>
+                Charger plus
+              </Button>
+            )}
+            {loading && results.length > 0 && (
+              <p className="text-sm text-muted-foreground text-center py-2">Chargement...</p>
+            )}
           </SheetBody>
         </>
       )}
