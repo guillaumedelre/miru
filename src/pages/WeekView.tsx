@@ -4,18 +4,7 @@ import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
 import DayRow from '@/components/DayRow'
 import { useWeeklySchedule, getWeekDates } from '@/hooks/useWeeklySchedule'
 import { useTopbarActions } from '@/contexts/TopbarActionsContext'
-
-function formatWeekRange(dates: string[]): string {
-  const startYear = dates[0].slice(0, 4)
-  const endYear = dates[6].slice(0, 4)
-  const fmt = (d: string, showYear: boolean) => {
-    const [year,, day] = d.split('-')
-    const month = new Date(d).toLocaleDateString('fr-FR', { month: 'short' })
-    return showYear ? `${parseInt(day)} ${month} ${year}` : `${parseInt(day)} ${month}`
-  }
-  const sameYear = startYear === endYear
-  return `${fmt(dates[0], false)} – ${fmt(dates[6], !sameYear)} ${sameYear ? startYear : ''}`
-}
+import { formatWeekRange } from '@/lib/formatting'
 
 function TodayIcon() {
   const day = new Date().getDate()

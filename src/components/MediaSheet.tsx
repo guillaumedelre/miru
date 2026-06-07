@@ -6,20 +6,8 @@ import ProgressPicker from '@/components/ProgressPicker'
 import { getAnilistDetails, type AnilistMediaDetails } from '@/api/anilist'
 import { getTmdbDetails, getWatchProviders, posterUrl, type TmdbDetails, type TmdbWatchProviders } from '@/api/tmdb'
 import { useStore } from '@/store'
+import { stripHtml } from '@/lib/formatting'
 import type { TrackedItem, Status } from '@/types'
-
-function stripHtml(html: string): string {
-  return html
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'")
-    .replace(/&nbsp;/g, ' ')
-    .trim()
-}
 
 const ANILIST_STATUS: Record<string, string> = {
   FINISHED: 'Terminé',

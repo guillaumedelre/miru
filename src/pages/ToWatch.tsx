@@ -5,6 +5,7 @@ import { useWeeklySchedule, getWeekDates, type WeeklyEpisode } from '@/hooks/use
 import { getAiringSchedule } from '@/api/anilist'
 import { getNextEpisode } from '@/api/tmdb'
 import { useStore } from '@/store'
+import { formatDay, daysUntil, formatRelative } from '@/lib/formatting'
 import type { TrackedItem } from '@/types'
 
 type Tab = 'backlog' | 'week' | 'returning'
@@ -14,10 +15,6 @@ const TABS: { value: Tab; label: string }[] = [
   { value: 'week', label: 'Cette semaine' },
   { value: 'returning', label: 'Reprises' },
 ]
-
-function formatDay(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
-}
 
 function Loading() {
   return <p className="text-sm text-muted-foreground text-center py-12">Chargement...</p>
@@ -155,23 +152,6 @@ interface ReturningEntry {
   nextSeason?: number
 }
 
-function daysUntil(dateStr: string): number {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const target = new Date(dateStr)
-  target.setHours(0, 0, 0, 0)
-  return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-}
-
-function formatRelative(days: number): string {
-  if (days === 1) return 'demain'
-  if (days < 7) return `dans ${days} jours`
-  const weeks = Math.round(days / 7)
-  if (weeks < 5) return `dans ${weeks} semaine${weeks > 1 ? 's' : ''}`
-  const months = Math.round(days / 30)
-  if (months < 12) return `dans ${months} mois`
-  return `dans ${Math.round(days / 365)} an`
-}
 
 function ReturningCard({ entry }: { entry: ReturningEntry }) {
   const days = daysUntil(entry.nextDate)
