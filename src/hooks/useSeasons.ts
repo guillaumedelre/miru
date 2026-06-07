@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { getTvSeasons, type TmdbSeason, type TmdbEpisodeDetail } from '@/api/tmdb'
 import { getAnimeEpisodeCount } from '@/api/jikan'
+import { notifyApiError } from '@/lib/errors'
 import type { Source, MediaType } from '@/types'
 
 export interface Season {
@@ -70,7 +71,7 @@ export function useSeasons({ sourceId, source, type, totalEpisodes, malId, onTot
           })
           setSeasons(built)
         })
-        .catch(() => setSeasons([]))
+        .catch((err) => { notifyApiError('useSeasons/tmdb', err); setSeasons([]) })
         .finally(() => setLoadingSeasons(false))
     } else if (totalEpisodes) {
       setSeasons(buildVirtualSeasons(totalEpisodes))
@@ -84,7 +85,7 @@ export function useSeasons({ sourceId, source, type, totalEpisodes, malId, onTot
             onTotalResolved?.(count)
           }
         })
-        .catch(() => {})
+        .catch((err) => notifyApiError('useSeasons/jikan', err))
         .finally(() => setLoadingSeasons(false))
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

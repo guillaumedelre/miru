@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Toaster } from 'sonner'
 import { BrowserRouter, NavLink, Route, Routes, Navigate, useLocation } from 'react-router-dom'
 import { LogOut, CalendarDays, LayoutGrid, BarChart3, UserCircle, Tv, type LucideIcon } from 'lucide-react'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
@@ -185,6 +186,7 @@ export default function App() {
       <TopbarActionsProvider>
         <BrowserRouter>
           <AppShell />
+          <Toaster position="bottom-center" richColors />
         </BrowserRouter>
       </TopbarActionsProvider>
     </AuthProvider>
