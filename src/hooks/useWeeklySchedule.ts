@@ -4,7 +4,7 @@ import { getAiringSchedule } from '@/api/anilist'
 import { getNextEpisode } from '@/api/tmdb'
 import { getEpisodeName } from '@/api/jikan'
 import { notifyEnrichment } from '@/lib/errors'
-import type { MediaType } from '@/types'
+import { isAnimeItem, isSeriesItem, type MediaType } from '@/types'
 
 type AiringSlot = { mediaId: number; episode: number; airingAt: number }
 
@@ -93,7 +93,7 @@ export function useWeeklySchedule(weekOffset = 0) {
       weekDates.forEach((d) => map.set(d, []))
 
       // AniList anime — batch unique, résultat mis en cache par (ids + semaine)
-      const anilistItems = watching.filter((i) => i.source === 'anilist' && i.type === 'anime')
+      const anilistItems = watching.filter(isAnimeItem)
       if (anilistItems.length > 0) {
         const ids = anilistItems.map((i) => Number(i.sourceId))
         const weekStart = Math.floor(new Date(weekDates[0]).getTime() / 1000)
@@ -126,7 +126,7 @@ export function useWeeklySchedule(weekOffset = 0) {
       }
 
       // TMDB series — un appel par item, mis en cache par (sourceId + progress)
-      const tmdbItems = watching.filter((i) => i.source === 'tmdb' && i.type === 'series')
+      const tmdbItems = watching.filter(isSeriesItem)
       await Promise.allSettled(
         tmdbItems.map(async (item) => {
           const ep = await cachedNextEpisode(item.sourceId, item.progress).catch(() => null)

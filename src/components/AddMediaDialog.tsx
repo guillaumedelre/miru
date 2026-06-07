@@ -8,7 +8,7 @@ import { useStore } from '@/store'
 import { searchMedia, type AnilistMedia } from '@/api/anilist'
 import { searchMulti, type TmdbMedia } from '@/api/tmdb'
 import { resolveMediaMetadata, extractDisplayInfo, type MediaMetadata } from '@/api/adapters'
-import type { TrackedItem } from '@/types'
+import type { TrackedItem, AnimeItem, SeriesItem, MovieItem } from '@/types'
 
 type Tab = 'anime' | 'series' | 'movie'
 
@@ -114,20 +114,26 @@ export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
     }
 
     const itemId = crypto.randomUUID()
-    addItem({
+    const base = {
       id: itemId,
       sourceId: String(pending.result.id),
-      source: pending.source,
-      type: pending.type,
       title: pending.title,
       coverImage: pending.image,
       status,
       progress,
       totalEpisodes: pending.totalEpisodes,
       isFinished: pending.isFinished,
-      malId: pending.malId,
       episodeDuration: pending.episodeDuration,
-    })
+    }
+    let item: TrackedItem
+    if (pending.type === 'anime') {
+      item = { ...base, type: 'anime', source: pending.source as AnimeItem['source'], malId: pending.malId }
+    } else if (pending.type === 'series') {
+      item = { ...base, type: 'series', source: 'tmdb' } satisfies SeriesItem
+    } else {
+      item = { ...base, type: 'movie', source: 'tmdb' } satisfies MovieItem
+    }
+    addItem(item)
     watchedEps.forEach((ep) => markWatched(itemId, ep))
     onClose()
   }

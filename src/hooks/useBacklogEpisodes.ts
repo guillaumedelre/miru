@@ -5,6 +5,7 @@ import { getAiringSchedule } from '@/api/anilist'
 import { getNextEpisode } from '@/api/tmdb'
 import { getWeekDates, type WeeklyEpisode } from '@/hooks/useWeeklySchedule'
 import { notifyApiError } from '@/lib/errors'
+import { isAnimeItem, isSeriesItem } from '@/types'
 
 export function useBacklogEpisodes(): { episodes: WeeklyEpisode[]; loading: boolean } {
   const items = useStore(s => s.items)
@@ -21,7 +22,7 @@ export function useBacklogEpisodes(): { episodes: WeeklyEpisode[]; loading: bool
       const pastStart = weekStartTs - 60 * 24 * 60 * 60
       const result: WeeklyEpisode[] = []
 
-      const anilistItems = watching.filter(i => i.source === 'anilist')
+      const anilistItems = watching.filter(isAnimeItem)
       if (anilistItems.length > 0) {
         const ids = anilistItems.map(i => Number(i.sourceId))
         const schedules = await getAiringSchedule(ids, pastStart, weekStartTs - 1).catch((err) => { notifyApiError('useBacklogEpisodes/anilist', err); return [] })
@@ -33,7 +34,7 @@ export function useBacklogEpisodes(): { episodes: WeeklyEpisode[]; loading: bool
         }
       }
 
-      const tmdbItems = watching.filter(i => i.source === 'tmdb' && i.type === 'series')
+      const tmdbItems = watching.filter(isSeriesItem)
       await Promise.allSettled(
         tmdbItems.map(async item => {
           const ep = await getNextEpisode(Number(item.sourceId), item.progress).catch((err) => { notifyApiError('useBacklogEpisodes/tmdb', err); return null })

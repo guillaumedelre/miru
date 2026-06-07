@@ -37,20 +37,34 @@ describe('TrackedItemSchema', () => {
     expect(TrackedItemSchema.safeParse({ ...validItem, source: 'crunchyroll' }).success).toBe(false)
   })
 
-  it('accepts all valid source values', () => {
-    for (const source of ['anilist', 'jikan', 'tmdb']) {
+  it('accepts anilist and jikan as source for anime', () => {
+    for (const source of ['anilist', 'jikan']) {
       expect(TrackedItemSchema.safeParse({ ...validItem, source }).success).toBe(true)
     }
+  })
+
+  it('rejects tmdb as source for anime', () => {
+    expect(TrackedItemSchema.safeParse({ ...validItem, source: 'tmdb' }).success).toBe(false)
+  })
+
+  it('accepts tmdb as source for series and movie', () => {
+    for (const type of ['series', 'movie']) {
+      expect(TrackedItemSchema.safeParse({ ...validItem, type, source: 'tmdb' }).success).toBe(true)
+    }
+  })
+
+  it('rejects anilist as source for series', () => {
+    expect(TrackedItemSchema.safeParse({ ...validItem, type: 'series', source: 'anilist' }).success).toBe(false)
   })
 
   it('rejects invalid type', () => {
     expect(TrackedItemSchema.safeParse({ ...validItem, type: 'book' }).success).toBe(false)
   })
 
-  it('accepts all valid type values', () => {
-    for (const type of ['anime', 'series', 'movie']) {
-      expect(TrackedItemSchema.safeParse({ ...validItem, type }).success).toBe(true)
-    }
+  it('accepts all valid type values with correct source', () => {
+    expect(TrackedItemSchema.safeParse({ ...validItem, type: 'anime', source: 'anilist' }).success).toBe(true)
+    expect(TrackedItemSchema.safeParse({ ...validItem, type: 'series', source: 'tmdb' }).success).toBe(true)
+    expect(TrackedItemSchema.safeParse({ ...validItem, type: 'movie', source: 'tmdb' }).success).toBe(true)
   })
 
   it('rejects invalid status', () => {
