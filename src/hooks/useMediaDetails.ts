@@ -11,6 +11,7 @@ interface MediaInfo {
 }
 
 const EMPTY_INFO: MediaInfo = { details: null, watchProviders: { providers: [], link: null } }
+const detailsCache = new Map<string, MediaInfo>()
 
 export function useMediaDetails(item: TrackedItem, open: boolean) {
   const { data: info, loading, run } = useAsyncState<MediaInfo>(EMPTY_INFO)
@@ -19,17 +20,25 @@ export function useMediaDetails(item: TrackedItem, open: boolean) {
     if (!open) return
     const id = Number(item.sourceId)
     const mediaType = item.type === 'series' ? 'tv' : 'movie'
+    const cacheKey = `${item.source}-${item.sourceId}-${item.type}`
 
     run(async () => {
+      if (detailsCache.has(cacheKey)) return detailsCache.get(cacheKey)!
+
+      let result: MediaInfo
       if (item.source === 'anilist') {
         const details = await getAnilistDetails(id).catch(() => null)
-        return { details, watchProviders: { providers: [], link: null } }
+        result = { details, watchProviders: { providers: [], link: null } }
+      } else {
+        const [details, watchProviders] = await Promise.all([
+          getTmdbDetails(id, mediaType).catch(() => null),
+          getWatchProviders(id, mediaType).catch((err) => { notifyEnrichment('useMediaDetails/watch-providers', err); return null }),
+        ])
+        result = { details, watchProviders: watchProviders ?? { providers: [], link: null } }
       }
-      const [details, watchProviders] = await Promise.all([
-        getTmdbDetails(id, mediaType).catch(() => null),
-        getWatchProviders(id, mediaType).catch((err) => { notifyEnrichment('useMediaDetails/watch-providers', err); return null }),
-      ])
-      return { details, watchProviders: watchProviders ?? { providers: [], link: null } }
+
+      detailsCache.set(cacheKey, result)
+      return result
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, item.sourceId, item.source, item.type])
