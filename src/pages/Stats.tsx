@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useStore } from '@/store'
 import { getAnilistGenresBatch } from '@/api/anilist'
 import { getTmdbGenres } from '@/api/tmdb'
@@ -38,19 +38,19 @@ export default function Stats() {
     return acc + epCount * item.episodeDuration
   }, 0)
 
-  const byType = Object.entries(
+  const byType = useMemo(() => Object.entries(
     items.reduce<Record<string, number>>(
       (acc, i) => { acc[i.type] = (acc[i.type] ?? 0) + 1; return acc },
       { anime: 0, series: 0, movie: 0 }
     )
-  ).sort((a, b) => b[1] - a[1])
+  ).sort((a, b) => b[1] - a[1]), [items])
 
-  const byStatus = Object.entries(
+  const byStatus = useMemo(() => Object.entries(
     items.reduce<Record<string, number>>(
       (acc, i) => { acc[i.status] = (acc[i.status] ?? 0) + 1; return acc },
       { watching: 0, completed: 0, plan_to_watch: 0 }
     )
-  ).sort((a, b) => b[1] - a[1])
+  ).sort((a, b) => b[1] - a[1]), [items])
 
   const { data: genreMap, loading: loadingGenres, run: loadGenres } = useAsyncState<Record<string, string[]>>({})
 
@@ -82,15 +82,13 @@ export default function Stats() {
     })
   }, [items, loadGenres])
 
-  const genreCounts = Object.values(genreMap)
-    .flat()
-    .reduce<Record<string, number>>((acc, g) => { acc[g] = (acc[g] ?? 0) + 1; return acc }, {})
-
-  const topGenres = Object.entries(genreCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 8)
-
-  const topGenreCount = topGenres[0]?.[1] ?? 1
+  const { topGenres, topGenreCount } = useMemo(() => {
+    const counts = Object.values(genreMap)
+      .flat()
+      .reduce<Record<string, number>>((acc, g) => { acc[g] = (acc[g] ?? 0) + 1; return acc }, {})
+    const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8)
+    return { topGenres: top, topGenreCount: top[0]?.[1] ?? 1 }
+  }, [genreMap])
 
   return (
     <div className="space-y-6">

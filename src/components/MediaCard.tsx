@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Info, List, Trash2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -36,7 +36,7 @@ export default function MediaCard({ item, flipped = false, onFlip }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [initialTab, setInitialTab] = useState<'info' | 'progress'>('info')
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const variant = variantForId(item.id)
+  const variant = useMemo(() => variantForId(item.id), [item.id])
   const maskStyle = {
     maskImage: `url(${MASK_MAP[variant]})`,
     maskSize: '100% 100%',

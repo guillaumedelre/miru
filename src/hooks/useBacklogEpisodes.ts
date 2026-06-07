@@ -45,7 +45,7 @@ export function useBacklogEpisodes(): { episodes: WeeklyEpisode[]; loading: bool
       result.sort((a, b) => b.airingDate.localeCompare(a.airingDate))
       return result
     })
-  }, [items, run])
+  }, [items, watched, run])
 
   const episodes = rawEpisodes.filter(ep =>
     !watched.some(w => w.itemId === ep.itemId && w.episode === ep.episode)
