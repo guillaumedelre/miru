@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { getAnilistDetails, type AnilistMediaDetails } from '@/api/anilist'
 import { getTmdbDetails, getWatchProviders, type TmdbDetails, type TmdbWatchProviders } from '@/api/tmdb'
 import { useAsyncState } from '@/hooks/useAsyncState'
+import { notifyEnrichment } from '@/lib/errors'
 import type { TrackedItem } from '@/types'
 
 interface MediaInfo {
@@ -26,7 +27,7 @@ export function useMediaDetails(item: TrackedItem, open: boolean) {
       }
       const [details, watchProviders] = await Promise.all([
         getTmdbDetails(id, mediaType).catch(() => null),
-        getWatchProviders(id, mediaType).catch(() => null),
+        getWatchProviders(id, mediaType).catch((err) => { notifyEnrichment('useMediaDetails/watch-providers', err); return null }),
       ])
       return { details, watchProviders: watchProviders ?? { providers: [], link: null } }
     })

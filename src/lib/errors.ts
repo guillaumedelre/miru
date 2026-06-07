@@ -6,5 +6,11 @@ export function notifyError(message: string, err?: unknown): void {
 }
 
 export function notifyApiError(context: string, err?: unknown): void {
-  console.error(`[${context}]`, err)
+  console.warn(`[${context}]`, err)
+  toast.warning('Certaines données n\'ont pas pu être chargées.')
+}
+
+export function notifyEnrichment(context: string, err?: unknown): void {
+  console.info(`[${context}]`, err)
+  toast.info('Des informations complémentaires sont indisponibles.')
 }

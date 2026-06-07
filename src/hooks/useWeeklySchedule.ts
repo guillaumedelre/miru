@@ -3,6 +3,7 @@ import { useStore } from '@/store'
 import { getAiringSchedule } from '@/api/anilist'
 import { getNextEpisode } from '@/api/tmdb'
 import { getEpisodeName } from '@/api/jikan'
+import { notifyEnrichment } from '@/lib/errors'
 import type { MediaType } from '@/types'
 
 export interface WeeklyEpisode {
@@ -69,7 +70,7 @@ export function useWeeklySchedule(weekOffset = 0) {
             // Nom de l'épisode via Jikan si malId disponible
             let episodeName: string | undefined
             if (item.malId) {
-              episodeName = (await getEpisodeName(item.malId, s.episode).catch(() => null)) ?? undefined
+              episodeName = (await getEpisodeName(item.malId, s.episode).catch((err) => { notifyEnrichment('useWeeklySchedule/jikan', err); return null })) ?? undefined
             }
 
             map.get(date)!.push({
