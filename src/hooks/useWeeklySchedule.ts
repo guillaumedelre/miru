@@ -110,7 +110,7 @@ export function useWeeklySchedule(weekOffset = 0) {
     }
 
     fetch()
-  }, [items, weekDates, weekOffset])
+  }, [items, weekDates])
 
   return { schedule, weekDates, loading }
 }
