@@ -2,8 +2,6 @@ import { posterUrl, getTvSeasons, type TmdbMedia } from '@/api/tmdb'
 import { type AnilistMedia } from '@/api/anilist'
 import type { Source, MediaType } from '@/types'
 
-type Tab = 'anime' | 'series' | 'movie'
-
 export interface MediaDisplayInfo {
   title: string
   image: string
@@ -33,7 +31,7 @@ export function extractDisplayInfo(result: AnilistMedia | TmdbMedia): MediaDispl
 
 export async function resolveMediaMetadata(
   result: AnilistMedia | TmdbMedia,
-  tab: Tab,
+  tab: MediaType,
 ): Promise<MediaMetadata> {
   const { title, image, source } = extractDisplayInfo(result)
 
@@ -61,5 +59,5 @@ export async function resolveMediaMetadata(
     if (t.runtime) episodeDuration = t.runtime
   }
 
-  return { title, image, source, type: tab as MediaType, totalEpisodes, isFinished, malId, episodeDuration }
+  return { title, image, source, type: tab, totalEpisodes, isFinished, malId, episodeDuration }
 }

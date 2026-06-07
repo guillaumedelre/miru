@@ -8,14 +8,12 @@ import { useStore } from '@/store'
 import { searchMedia, type AnilistMedia } from '@/api/anilist'
 import { searchTv, searchMovie, type TmdbMedia } from '@/api/tmdb'
 import { resolveMediaMetadata, extractDisplayInfo, type MediaMetadata } from '@/api/adapters'
-import type { TrackedItem, AnimeItem, SeriesItem, MovieItem } from '@/types'
-
-type Tab = 'anime' | 'series' | 'movie'
+import type { TrackedItem, AnimeItem, SeriesItem, MovieItem, MediaType } from '@/types'
 
 type Pending = MediaMetadata & { result: AnilistMedia | TmdbMedia }
 
 interface State {
-  tab: Tab
+  tab: MediaType
   query: string
   results: (AnilistMedia | TmdbMedia)[]
   loading: boolean
@@ -25,7 +23,7 @@ interface State {
 }
 
 type Action =
-  | { type: 'CHANGE_TAB'; tab: Tab }
+  | { type: 'CHANGE_TAB'; tab: MediaType }
   | { type: 'SET_QUERY'; query: string }
   | { type: 'SEARCH_START' }
   | { type: 'SEARCH_DONE'; results: (AnilistMedia | TmdbMedia)[]; hasMore: boolean; append: boolean }
@@ -224,7 +222,7 @@ export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
           {/* En-tête : titre + onglets + recherche */}
           <div className="shrink-0 px-6 pt-6 pb-4 border-b border-border space-y-4">
             <h2 className="text-base font-semibold pr-10">Ajouter un média</h2>
-            <Tabs value={tab} onValueChange={(v) => dispatch({ type: 'CHANGE_TAB', tab: v as Tab })}>
+            <Tabs value={tab} onValueChange={(v) => dispatch({ type: 'CHANGE_TAB', tab: v as MediaType })}>
               <TabsList className="w-full">
                 <TabsTrigger value="anime" className="flex-1">Anime</TabsTrigger>
                 <TabsTrigger value="series" className="flex-1">Série</TabsTrigger>

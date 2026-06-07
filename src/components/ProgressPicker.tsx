@@ -17,7 +17,7 @@ interface Props {
   onTotalResolved?: (total: number) => void
 }
 
-function globalEp(season: Season, localEp: number) {
+function toGlobalEpisodeNumber(season: Season, localEp: number) {
   return season.globalOffset + localEp
 }
 
@@ -78,7 +78,7 @@ function SeasonRow({ season, isOpen, loadingEpisodes, checked, onToggleOpen, onT
             <p className="text-xs text-muted-foreground py-2">Chargement...</p>
           ) : season.episodes ? (
             season.episodes.map((ep) => {
-              const gep = globalEp(season, ep.episode_number)
+              const gep = toGlobalEpisodeNumber(season, ep.episode_number)
               return (
                 <label
                   key={ep.episode_number}
@@ -136,7 +136,7 @@ export default function ProgressPicker({ sourceId, source, type, totalEpisodes, 
     if (!eps && source === 'tmdb') eps = await loadSeasonEpisodes(season.number)
     if (!eps?.length) return
 
-    const globalEps = eps.map(e => globalEp(season, e.episode_number))
+    const globalEps = eps.map(e => toGlobalEpisodeNumber(season, e.episode_number))
     const allChecked = globalEps.every(g => checked.has(g))
     const next = new Set(checked)
     if (allChecked) globalEps.forEach(g => next.delete(g))
@@ -180,17 +180,17 @@ export default function ProgressPicker({ sourceId, source, type, totalEpisodes, 
         .filter((u): u is PromiseFulfilledResult<{ number: number; eps: TmdbEpisodeDetail[] }> => u.status === 'fulfilled')
         .flatMap(({ value: { number: sNum, eps } }) => {
           const season = seasons.find(s => s.number === sNum)!
-          return eps.map(e => globalEp(season, e.episode_number))
+          return eps.map(e => toGlobalEpisodeNumber(season, e.episode_number))
         })
       const alreadyLoaded = seasons
         .filter(s => s.episodes !== null)
-        .flatMap(s => s.episodes!.map(e => globalEp(s, e.episode_number)))
+        .flatMap(s => s.episodes!.map(e => toGlobalEpisodeNumber(s, e.episode_number)))
       const next = new Set(checked)
       ;[...alreadyLoaded, ...freshEps].forEach(g => next.add(g))
       onChange(next)
     } else {
       const next = new Set(checked)
-      seasons.flatMap(s => s.episodes!.map(e => globalEp(s, e.episode_number))).forEach(g => next.add(g))
+      seasons.flatMap(s => s.episodes!.map(e => toGlobalEpisodeNumber(s, e.episode_number))).forEach(g => next.add(g))
       onChange(next)
     }
   }
