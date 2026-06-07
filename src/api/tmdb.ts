@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 const BASE = 'https://api.themoviedb.org/3'
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY as string
 
@@ -10,62 +12,73 @@ async function get<T>(path: string, params: Record<string, string> = {}): Promis
   return res.json()
 }
 
-export interface TmdbMedia {
-  id: number
-  title?: string
-  name?: string
-  poster_path: string | null
-  media_type: 'movie' | 'tv'
-  number_of_episodes?: number
-  runtime?: number
-  episode_run_time?: number[]
-}
+const TmdbMediaSchema = z.object({
+  id: z.number(),
+  title: z.string().optional(),
+  name: z.string().optional(),
+  poster_path: z.string().nullable(),
+  media_type: z.enum(['movie', 'tv']),
+  number_of_episodes: z.number().optional(),
+  runtime: z.number().optional(),
+  episode_run_time: z.array(z.number()).optional(),
+})
 
-export interface TmdbEpisode {
-  episode_number: number
-  name: string
-  air_date: string
-  season_number: number
-}
+export type TmdbMedia = z.infer<typeof TmdbMediaSchema>
 
-export interface TmdbSeason {
-  season_number: number
-  name: string
-  episode_count: number
-}
+const TmdbEpisodeSchema = z.object({
+  episode_number: z.number(),
+  name: z.string(),
+  air_date: z.string(),
+  season_number: z.number(),
+})
 
-export interface TmdbEpisodeDetail {
-  episode_number: number
-  name: string
-}
+export type TmdbEpisode = z.infer<typeof TmdbEpisodeSchema>
 
-export interface TmdbDetails {
-  title?: string
-  name?: string
-  overview: string
-  poster_path: string | null
-  backdrop_path: string | null
-  genres: { id: number; name: string }[]
-  vote_average: number
-  // movie
-  runtime?: number
-  release_date?: string
-  // tv
-  number_of_seasons?: number
-  number_of_episodes?: number
-  first_air_date?: string
-  status?: string
-}
+const TmdbSeasonSchema = z.object({
+  season_number: z.number(),
+  name: z.string(),
+  episode_count: z.number(),
+})
+
+export type TmdbSeason = z.infer<typeof TmdbSeasonSchema>
+
+const TmdbEpisodeDetailSchema = z.object({
+  episode_number: z.number(),
+  name: z.string(),
+})
+
+export type TmdbEpisodeDetail = z.infer<typeof TmdbEpisodeDetailSchema>
+
+const TmdbDetailsSchema = z.object({
+  title: z.string().optional(),
+  name: z.string().optional(),
+  overview: z.string(),
+  poster_path: z.string().nullable(),
+  backdrop_path: z.string().nullable(),
+  genres: z.array(z.object({ id: z.number(), name: z.string() })),
+  vote_average: z.number(),
+  runtime: z.number().optional(),
+  release_date: z.string().optional(),
+  number_of_seasons: z.number().optional(),
+  number_of_episodes: z.number().optional(),
+  first_air_date: z.string().optional(),
+  status: z.string().optional(),
+})
+
+export type TmdbDetails = z.infer<typeof TmdbDetailsSchema>
 
 export async function getTmdbDetails(id: number, type: 'movie' | 'tv'): Promise<TmdbDetails> {
-  return get<TmdbDetails>(`/${type}/${id}`, { language: 'fr-FR' })
+  const data = await get<unknown>(`/${type}/${id}`, { language: 'fr-FR' })
+  return TmdbDetailsSchema.parse(data)
 }
 
-export interface TmdbProvider {
-  provider_id: number
-  provider_name: string
-  logo_path: string
-}
+const TmdbProviderSchema = z.object({
+  provider_id: z.number(),
+  provider_name: z.string(),
+  logo_path: z.string(),
+})
+
+export type TmdbProvider = z.infer<typeof TmdbProviderSchema>
 
 export interface TmdbWatchProviders {
   providers: TmdbProvider[]
@@ -73,7 +86,7 @@ export interface TmdbWatchProviders {
 }
 
 export async function getWatchProviders(id: number, type: 'movie' | 'tv'): Promise<TmdbWatchProviders> {
-  const data = await get<{ results: Record<string, { link: string; flatrate?: TmdbProvider[]; rent?: TmdbProvider[]; buy?: TmdbProvider[] }> }>(
+  const data = await get<{ results: Record<string, { link: string; flatrate?: unknown[]; rent?: unknown[]; buy?: unknown[] }> }>(
     `/${type}/${id}/watch/providers`
   )
   const country = data.results['FR'] ?? data.results['US'] ?? null
@@ -81,27 +94,36 @@ export async function getWatchProviders(id: number, type: 'movie' | 'tv'): Promi
   const seen = new Set<number>()
   const providers: TmdbProvider[] = []
   for (const p of [...(country.flatrate ?? []), ...(country.rent ?? []), ...(country.buy ?? [])]) {
-    if (!seen.has(p.provider_id)) { seen.add(p.provider_id); providers.push(p) }
+    const parsed = TmdbProviderSchema.safeParse(p)
+    if (parsed.success && !seen.has(parsed.data.provider_id)) {
+      seen.add(parsed.data.provider_id)
+      providers.push(parsed.data)
+    }
   }
   return { providers, link: country.link ?? null }
 }
 
 export async function getTvSeasons(tvId: number): Promise<{ seasons: TmdbSeason[]; isFinished: boolean }> {
-  const data = await get<{ seasons: TmdbSeason[]; status: string }>(`/tv/${tvId}`, { language: 'fr-FR' })
+  const data = await get<{ seasons: unknown[]; status: string }>(`/tv/${tvId}`, { language: 'fr-FR' })
+  const seasons = z.array(TmdbSeasonSchema).parse(data.seasons).filter((s) => s.season_number > 0)
   return {
-    seasons: data.seasons.filter((s) => s.season_number > 0),
+    seasons,
     isFinished: data.status === 'Ended' || data.status === 'Canceled',
   }
 }
 
 export async function getSeasonEpisodes(tvId: number, seasonNumber: number): Promise<TmdbEpisodeDetail[]> {
-  const data = await get<{ episodes: TmdbEpisodeDetail[] }>(`/tv/${tvId}/season/${seasonNumber}`, { language: 'fr-FR' })
-  return data.episodes
+  const data = await get<{ episodes: unknown[] }>(`/tv/${tvId}/season/${seasonNumber}`, { language: 'fr-FR' })
+  return z.array(TmdbEpisodeDetailSchema).parse(data.episodes)
 }
 
 export async function searchMulti(query: string): Promise<TmdbMedia[]> {
-  const data = await get<{ results: TmdbMedia[] }>('/search/multi', { query, language: 'fr-FR' })
-  return data.results.filter(r => r.media_type === 'movie' || r.media_type === 'tv')
+  const data = await get<{ results: unknown[] }>('/search/multi', { query, language: 'fr-FR' })
+  return data.results
+    .map(r => TmdbMediaSchema.safeParse(r))
+    .filter(r => r.success)
+    .map(r => r.data)
+    .filter(r => r.media_type === 'movie' || r.media_type === 'tv')
 }
 
 export async function getNextEpisode(tvId: number, progress: number): Promise<TmdbEpisode | null> {
@@ -113,8 +135,8 @@ export async function getNextEpisode(tvId: number, progress: number): Promise<Tm
     if (season.season_number === 0) continue
     if (counted + season.episode_count >= nextEp) {
       const epInSeason = nextEp - counted
-      const ep = await get<TmdbEpisode>(`/tv/${tvId}/season/${season.season_number}/episode/${epInSeason}`)
-      return ep
+      const ep = await get<unknown>(`/tv/${tvId}/season/${season.season_number}/episode/${epInSeason}`)
+      return TmdbEpisodeSchema.parse(ep)
     }
     counted += season.episode_count
   }
