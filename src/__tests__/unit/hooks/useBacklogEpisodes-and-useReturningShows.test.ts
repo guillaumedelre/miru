@@ -14,9 +14,6 @@ import { animeItem, seriesItem } from '@/__tests__/helpers/fixtures'
 const ANILIST_ENDPOINT = 'https://graphql.anilist.co'
 const TMDB_BASE = 'https://api.themoviedb.org/3'
 
-// 2024-06-17 00:00:00 UTC (Monday — week start)
-const weekStartTs = Math.floor(new Date('2024-06-17').getTime() / 1000)
-
 // Past slot: 2024-06-10, clearly before weekStart
 const PAST_AIRING_AT = Math.floor(new Date('2024-06-10').getTime() / 1000)
 

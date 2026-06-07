@@ -1,6 +1,5 @@
 import React from 'react'
 import { screen, waitFor, fireEvent } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '@/__tests__/helpers/render'
 import WeekView from '@/pages/WeekView'
 

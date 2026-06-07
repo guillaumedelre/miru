@@ -8,6 +8,7 @@ interface Options extends Omit<RenderOptions, 'wrapper'> {
   route?: string
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 function Providers({ children, userId, route }: { children: ReactNode; userId: string; route: string }) {
   return (
     <MemoryRouter initialEntries={[route]}>

@@ -9,7 +9,6 @@ import {
   seriesItem,
   movieItem,
   planItem,
-  watchedEpisodes,
 } from '@/__tests__/helpers/fixtures'
 
 const wrapper = ({ children }: { children: React.ReactNode }) =>

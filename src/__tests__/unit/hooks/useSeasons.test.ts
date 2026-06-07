@@ -1,6 +1,6 @@
 vi.mock('@/lib/firestore', () => ({ loadUserData: vi.fn(() => Promise.resolve(null)), saveUserData: vi.fn() }))
 
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { server } from '@/__tests__/mocks/server'
 import { useSeasons } from '@/hooks/useSeasons'
