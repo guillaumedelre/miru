@@ -6,22 +6,13 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import ProgressPicker from '@/components/ProgressPicker'
 import { useStore } from '@/store'
 import { searchMedia, type AnilistMedia } from '@/api/anilist'
-import { searchMulti, posterUrl, getTvSeasons, type TmdbMedia } from '@/api/tmdb'
-import type { TrackedItem, MediaType, Source } from '@/types'
+import { searchMulti, type TmdbMedia } from '@/api/tmdb'
+import { resolveMediaMetadata, extractDisplayInfo, type MediaMetadata } from '@/api/adapters'
+import type { TrackedItem } from '@/types'
 
 type Tab = 'anime' | 'series' | 'movie'
 
-interface Pending {
-  result: AnilistMedia | TmdbMedia
-  title: string
-  image: string
-  totalEpisodes?: number
-  source: Source
-  type: MediaType
-  isFinished: boolean
-  malId?: number
-  episodeDuration?: number
-}
+type Pending = MediaMetadata & { result: AnilistMedia | TmdbMedia }
 
 interface State {
   tab: Tab
@@ -71,42 +62,6 @@ function reducer(state: State, action: Action): State {
   }
 }
 
-async function resolveMediaMetadata(result: AnilistMedia | TmdbMedia, tab: Tab): Promise<Pending> {
-  const isAnilist = 'coverImage' in result
-  const title = isAnilist
-    ? ((result as AnilistMedia).title.english ?? (result as AnilistMedia).title.romaji)
-    : ((result as TmdbMedia).name ?? (result as TmdbMedia).title ?? '')
-  const image = isAnilist
-    ? (result as AnilistMedia).coverImage.large
-    : posterUrl((result as TmdbMedia).poster_path)
-  const source: Source = isAnilist ? 'anilist' : 'tmdb'
-
-  let totalEpisodes: number | undefined
-  let isFinished: boolean
-  let malId: number | undefined
-  let episodeDuration: number | undefined
-
-  if (isAnilist) {
-    const a = result as AnilistMedia
-    totalEpisodes = a.episodes ?? a.chapters ?? undefined
-    isFinished = a.status === 'FINISHED' || a.status === 'CANCELLED'
-    if (a.idMal) malId = a.idMal
-    if (a.duration) episodeDuration = a.duration
-  } else if (tab === 'series') {
-    const t = result as TmdbMedia
-    totalEpisodes = t.number_of_episodes
-    const details = await getTvSeasons(Number(result.id)).catch(() => null)
-    isFinished = details?.isFinished ?? false
-    if (details) totalEpisodes = details.seasons.reduce((s, season) => s + season.episode_count, 0)
-    if (t.episode_run_time?.length) episodeDuration = t.episode_run_time[0]
-  } else {
-    isFinished = true
-    const t = result as TmdbMedia
-    if (t.runtime) episodeDuration = t.runtime
-  }
-
-  return { result, title, image, totalEpisodes, source, type: tab as MediaType, isFinished, malId, episodeDuration }
-}
 
 interface Props {
   open: boolean
@@ -139,8 +94,8 @@ export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
   }, [query, tab])
 
   async function handleSelect(result: AnilistMedia | TmdbMedia) {
-    const resolved = await resolveMediaMetadata(result, tab)
-    dispatch({ type: 'SELECT_RESULT', pending: resolved })
+    const meta = await resolveMediaMetadata(result, tab)
+    dispatch({ type: 'SELECT_RESULT', pending: { ...meta, result } })
   }
 
   function handleConfirm() {
@@ -253,15 +208,8 @@ export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
               <p className="text-sm text-muted-foreground text-center py-6">Tape un titre pour rechercher.</p>
             )}
             {results.map((r) => {
-              const isAnilist = 'coverImage' in r
+              const { title, image, source } = extractDisplayInfo(r)
               const id = r.id
-              const source: Source = isAnilist ? 'anilist' : 'tmdb'
-              const title = isAnilist
-                ? ((r as AnilistMedia).title.english ?? (r as AnilistMedia).title.romaji)
-                : ((r as TmdbMedia).name ?? (r as TmdbMedia).title ?? '')
-              const image = isAnilist
-                ? (r as AnilistMedia).coverImage.large
-                : posterUrl((r as TmdbMedia).poster_path)
               const alreadyAdded = items.some((i) => i.sourceId === String(id) && i.source === source)
 
               return (
