@@ -52,7 +52,15 @@ export const mockTmdbEpisode = {
 
 export const tmdbHandlers = [
   http.get(`${BASE}/search/multi`, () =>
-    HttpResponse.json({ results: [mockTmdbSeries, mockTmdbMovie] })
+    HttpResponse.json({ results: [mockTmdbSeries, mockTmdbMovie], page: 1, total_pages: 1 })
+  ),
+
+  http.get(`${BASE}/search/tv`, () =>
+    HttpResponse.json({ results: [mockTmdbSeries], page: 1, total_pages: 2 })
+  ),
+
+  http.get(`${BASE}/search/movie`, () =>
+    HttpResponse.json({ results: [mockTmdbMovie], page: 1, total_pages: 1 })
   ),
 
   http.get(`${BASE}/tv/:id/season/:season/episode/:ep`, () =>

@@ -117,13 +117,31 @@ export async function getSeasonEpisodes(tvId: number, seasonNumber: number): Pro
   return z.array(TmdbEpisodeDetailSchema).parse(data.episodes)
 }
 
-export async function searchMulti(query: string): Promise<TmdbMedia[]> {
-  const data = await get<{ results: unknown[] }>('/search/multi', { query, language: 'fr-FR' })
-  return data.results
-    .map(r => TmdbMediaSchema.safeParse(r))
+export interface TmdbSearchResult {
+  results: TmdbMedia[]
+  hasMore: boolean
+}
+
+export async function searchTv(q: string, page = 1): Promise<TmdbSearchResult> {
+  const data = await get<{ results: unknown[]; page: number; total_pages: number }>(
+    '/search/tv', { query: q, language: 'fr-FR', page: String(page) }
+  )
+  const results = data.results
+    .map(r => TmdbMediaSchema.safeParse({ ...(r as object), media_type: 'tv' }))
     .filter(r => r.success)
     .map(r => r.data)
-    .filter(r => r.media_type === 'movie' || r.media_type === 'tv')
+  return { results, hasMore: data.page < data.total_pages }
+}
+
+export async function searchMovie(q: string, page = 1): Promise<TmdbSearchResult> {
+  const data = await get<{ results: unknown[]; page: number; total_pages: number }>(
+    '/search/movie', { query: q, language: 'fr-FR', page: String(page) }
+  )
+  const results = data.results
+    .map(r => TmdbMediaSchema.safeParse({ ...(r as object), media_type: 'movie' }))
+    .filter(r => r.success)
+    .map(r => r.data)
+  return { results, hasMore: data.page < data.total_pages }
 }
 
 export async function getNextEpisode(tvId: number, progress: number): Promise<TmdbEpisode | null> {

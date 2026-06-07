@@ -67,7 +67,7 @@ export const anilistHandlers = [
     }
 
     return HttpResponse.json({
-      data: { Page: { media: [mockAnilistMedia] } },
+      data: { Page: { media: [mockAnilistMedia], pageInfo: { hasNextPage: false } } },
     })
   }),
 ]
