@@ -5,8 +5,7 @@ import { getNextEpisode } from '@/api/tmdb'
 import { getEpisodeName } from '@/api/jikan'
 import { notifyEnrichment } from '@/lib/errors'
 import { isAnimeItem, isSeriesItem, type MediaType } from '@/types'
-
-type AiringSlot = { mediaId: number; episode: number; airingAt: number }
+import type { AiringSlot } from '@/lib/fetchAiringData'
 
 // Module-level caches — partagés entre les instances du hook (WeekView et ToWatch)
 const anilistScheduleCache = new Map<string, Promise<AiringSlot[]>>()

@@ -12,6 +12,11 @@ async function get<T>(path: string, params: Record<string, string> = {}): Promis
   return res.json()
 }
 
+async function getAndParse<T>(path: string, schema: z.ZodType<T>, params: Record<string, string> = {}): Promise<T> {
+  const data = await get<unknown>(path, params)
+  return schema.parse(data)
+}
+
 const TmdbMediaSchema = z.object({
   id: z.number(),
   title: z.string().optional(),
@@ -68,8 +73,7 @@ const TmdbDetailsSchema = z.object({
 export type TmdbDetails = z.infer<typeof TmdbDetailsSchema>
 
 export async function getTmdbDetails(id: number, type: 'movie' | 'tv'): Promise<TmdbDetails> {
-  const data = await get<unknown>(`/${type}/${id}`, { language: 'fr-FR' })
-  return TmdbDetailsSchema.parse(data)
+  return getAndParse(`/${type}/${id}`, TmdbDetailsSchema, { language: 'fr-FR' })
 }
 
 const TmdbProviderSchema = z.object({
@@ -113,8 +117,12 @@ export async function getTvSeasons(tvId: number): Promise<{ seasons: TmdbSeason[
 }
 
 export async function getSeasonEpisodes(tvId: number, seasonNumber: number): Promise<TmdbEpisodeDetail[]> {
-  const data = await get<{ episodes: unknown[] }>(`/tv/${tvId}/season/${seasonNumber}`, { language: 'fr-FR' })
-  return z.array(TmdbEpisodeDetailSchema).parse(data.episodes)
+  const { episodes } = await getAndParse(
+    `/tv/${tvId}/season/${seasonNumber}`,
+    z.object({ episodes: z.array(TmdbEpisodeDetailSchema) }),
+    { language: 'fr-FR' },
+  )
+  return episodes
 }
 
 export interface TmdbSearchResult {
@@ -122,26 +130,28 @@ export interface TmdbSearchResult {
   hasMore: boolean
 }
 
-export async function searchTv(q: string, page = 1): Promise<TmdbSearchResult> {
+async function searchByEndpoint(
+  endpoint: '/search/tv' | '/search/movie',
+  mediaType: 'tv' | 'movie',
+  q: string,
+  page: number,
+): Promise<TmdbSearchResult> {
   const data = await get<{ results: unknown[]; page: number; total_pages: number }>(
-    '/search/tv', { query: q, language: 'fr-FR', page: String(page) }
+    endpoint, { query: q, language: 'fr-FR', page: String(page) }
   )
   const results = data.results
-    .map(r => TmdbMediaSchema.safeParse({ ...(r as object), media_type: 'tv' }))
+    .map(r => TmdbMediaSchema.safeParse({ ...(r as object), media_type: mediaType }))
     .filter(r => r.success)
     .map(r => r.data)
   return { results, hasMore: data.page < data.total_pages }
 }
 
+export async function searchTv(q: string, page = 1): Promise<TmdbSearchResult> {
+  return searchByEndpoint('/search/tv', 'tv', q, page)
+}
+
 export async function searchMovie(q: string, page = 1): Promise<TmdbSearchResult> {
-  const data = await get<{ results: unknown[]; page: number; total_pages: number }>(
-    '/search/movie', { query: q, language: 'fr-FR', page: String(page) }
-  )
-  const results = data.results
-    .map(r => TmdbMediaSchema.safeParse({ ...(r as object), media_type: 'movie' }))
-    .filter(r => r.success)
-    .map(r => r.data)
-  return { results, hasMore: data.page < data.total_pages }
+  return searchByEndpoint('/search/movie', 'movie', q, page)
 }
 
 export async function getNextEpisode(tvId: number, progress: number): Promise<TmdbEpisode | null> {

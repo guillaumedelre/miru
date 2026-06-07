@@ -9,6 +9,7 @@ import { useStore } from '@/store'
 import { useMediaDetails } from '@/hooks/useMediaDetails'
 import { stripHtml } from '@/lib/formatting'
 import { isAnimeItem, type TrackedItem, type Status } from '@/types'
+import { inferWatchStatus } from '@/lib/inferWatchStatus'
 
 const ANILIST_STATUS: Record<string, string> = {
   FINISHED: 'Terminé',
@@ -51,14 +52,12 @@ export default function MediaSheet({ item, open, onClose, initialTab = 'info' }:
     const progress = episodes.length > 0 ? Math.max(...episodes) : 0
     const displayTotal = resolvedTotal ?? item.totalEpisodes
 
-    let status: Status
-    if (episodes.length === 0) {
-      status = 'plan_to_watch'
-    } else if (item.isFinished && displayTotal && episodes.length >= displayTotal) {
-      status = 'completed'
-    } else {
-      status = 'watching'
-    }
+    const status: Status = inferWatchStatus({
+      type: item.type,
+      isFinished: item.isFinished,
+      totalEpisodes: displayTotal,
+      watchedCount: episodes.length,
+    })
 
     setWatched(item.id, episodes)
     updateItem(item.id, {

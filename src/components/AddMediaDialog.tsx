@@ -9,6 +9,7 @@ import { searchMedia, type AnilistMedia } from '@/api/anilist'
 import { searchTv, searchMovie, type TmdbMedia } from '@/api/tmdb'
 import { resolveMediaMetadata, extractDisplayInfo, type MediaMetadata } from '@/api/adapters'
 import type { TrackedItem, AnimeItem, SeriesItem, MovieItem, MediaType } from '@/types'
+import { inferWatchStatus } from '@/lib/inferWatchStatus'
 
 type Pending = MediaMetadata & { result: AnilistMedia | TmdbMedia }
 
@@ -135,16 +136,12 @@ export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
     if (!pending) return
     const progress = watchedEps.size > 0 ? Math.max(...watchedEps) : 0
 
-    let status: TrackedItem['status']
-    if (pending.type === 'movie') {
-      status = watchedEps.size > 0 ? 'completed' : 'plan_to_watch'
-    } else if (watchedEps.size === 0) {
-      status = 'plan_to_watch'
-    } else if (pending.isFinished && pending.totalEpisodes && watchedEps.size >= pending.totalEpisodes) {
-      status = 'completed'
-    } else {
-      status = 'watching'
-    }
+    const status = inferWatchStatus({
+      type: pending.type,
+      isFinished: pending.isFinished,
+      totalEpisodes: pending.totalEpisodes,
+      watchedCount: watchedEps.size,
+    })
 
     const itemId = crypto.randomUUID()
     const base = {
