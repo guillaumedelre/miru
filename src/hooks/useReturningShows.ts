@@ -1,11 +1,10 @@
 import { useEffect } from 'react'
 import { useStore } from '@/store'
 import { useAsyncState } from '@/hooks/useAsyncState'
-import { getAiringSchedule } from '@/api/anilist'
-import { getNextEpisode } from '@/api/tmdb'
 import { getWeekDates } from '@/hooks/useWeeklySchedule'
+import { fetchAiringData } from '@/lib/fetchAiringData'
 import { notifyApiError } from '@/lib/errors'
-import { isAnimeItem, isSeriesItem, type TrackedItem } from '@/types'
+import type { TrackedItem } from '@/types'
 
 export interface ReturningEntry {
   item: TrackedItem
@@ -27,32 +26,29 @@ export function useReturningShows(): { entries: ReturningEntry[]; loading: boole
       const weekEnd = weekDates[6]
       const weekEndTs = Math.floor(new Date(weekEnd + 'T23:59:59').getTime() / 1000)
       const futureEnd = weekEndTs + 365 * 24 * 60 * 60
+
+      const { animeSlots, seriesEps } = await fetchAiringData(
+        watching,
+        weekEndTs + 1,
+        futureEnd,
+        (ctx, err) => notifyApiError(`useReturningShows/${ctx}`, err),
+      )
+
       const result: ReturningEntry[] = []
 
-      const anilistItems = watching.filter(isAnimeItem)
-      if (anilistItems.length > 0) {
-        const ids = anilistItems.map(i => Number(i.sourceId))
-        const schedules = await getAiringSchedule(ids, weekEndTs + 1, futureEnd).catch((err) => { notifyApiError('useReturningShows/anilist', err); return [] })
-        const byMedia = new Map<number, { mediaId: number; episode: number; airingAt: number }>()
-        for (const s of schedules) {
-          const existing = byMedia.get(s.mediaId)
-          if (!existing || s.airingAt < existing.airingAt) byMedia.set(s.mediaId, s)
-        }
-        for (const [mediaId, s] of byMedia) {
-          const item = anilistItems.find(i => i.sourceId === String(mediaId))
-          if (!item) continue
-          result.push({ item, nextDate: new Date(s.airingAt * 1000).toLocaleDateString('sv-SE'), nextEpisode: s.episode })
-        }
+      const byMedia = new Map<number, { item: typeof animeSlots[0]['item']; slot: typeof animeSlots[0]['slot'] }>()
+      for (const { item, slot } of animeSlots) {
+        const existing = byMedia.get(slot.mediaId)
+        if (!existing || slot.airingAt < existing.slot.airingAt) byMedia.set(slot.mediaId, { item, slot })
+      }
+      for (const [, { item, slot }] of byMedia) {
+        result.push({ item, nextDate: new Date(slot.airingAt * 1000).toLocaleDateString('sv-SE'), nextEpisode: slot.episode })
       }
 
-      const tmdbItems = watching.filter(isSeriesItem)
-      await Promise.allSettled(
-        tmdbItems.map(async item => {
-          const ep = await getNextEpisode(Number(item.sourceId), item.progress).catch((err) => { notifyApiError('useReturningShows/tmdb', err); return null })
-          if (!ep?.air_date || ep.air_date <= weekEnd) return
-          result.push({ item, nextDate: ep.air_date, nextEpisode: ep.episode_number, nextSeason: ep.season_number })
-        })
-      )
+      for (const { item, ep } of seriesEps) {
+        if (!ep?.air_date || ep.air_date <= weekEnd) continue
+        result.push({ item, nextDate: ep.air_date, nextEpisode: ep.episode_number, nextSeason: ep.season_number })
+      }
 
       result.sort((a, b) => a.nextDate.localeCompare(b.nextDate))
       return result

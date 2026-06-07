@@ -1,11 +1,9 @@
 import { useEffect } from 'react'
 import { useStore } from '@/store'
 import { useAsyncState } from '@/hooks/useAsyncState'
-import { getAiringSchedule } from '@/api/anilist'
-import { getNextEpisode } from '@/api/tmdb'
 import { getWeekDates, type WeeklyEpisode } from '@/hooks/useWeeklySchedule'
+import { fetchAiringData } from '@/lib/fetchAiringData'
 import { notifyApiError } from '@/lib/errors'
-import { isAnimeItem, isSeriesItem } from '@/types'
 
 export function useBacklogEpisodes(): { episodes: WeeklyEpisode[]; loading: boolean } {
   const items = useStore(s => s.items)
@@ -20,32 +18,29 @@ export function useBacklogEpisodes(): { episodes: WeeklyEpisode[]; loading: bool
       const [weekStart] = getWeekDates(0)
       const weekStartTs = Math.floor(new Date(weekStart).getTime() / 1000)
       const pastStart = weekStartTs - 60 * 24 * 60 * 60
+
+      const { animeSlots, seriesEps } = await fetchAiringData(
+        watching,
+        pastStart,
+        weekStartTs - 1,
+        (ctx, err) => notifyApiError(`useBacklogEpisodes/${ctx}`, err),
+      )
+
       const result: WeeklyEpisode[] = []
 
-      const anilistItems = watching.filter(isAnimeItem)
-      if (anilistItems.length > 0) {
-        const ids = anilistItems.map(i => Number(i.sourceId))
-        const schedules = await getAiringSchedule(ids, pastStart, weekStartTs - 1).catch((err) => { notifyApiError('useBacklogEpisodes/anilist', err); return [] })
-        for (const s of schedules) {
-          const item = anilistItems.find(i => i.sourceId === String(s.mediaId))
-          if (!item) continue
-          const date = new Date(s.airingAt * 1000).toLocaleDateString('sv-SE')
-          result.push({ itemId: item.id, title: item.title, coverImage: item.coverImage, episode: s.episode, airingDate: date, type: 'anime' })
-        }
+      for (const { item, slot } of animeSlots) {
+        const date = new Date(slot.airingAt * 1000).toLocaleDateString('sv-SE')
+        result.push({ itemId: item.id, title: item.title, coverImage: item.coverImage, episode: slot.episode, airingDate: date, type: 'anime' })
       }
 
-      const tmdbItems = watching.filter(isSeriesItem)
-      await Promise.allSettled(
-        tmdbItems.map(async item => {
-          const ep = await getNextEpisode(Number(item.sourceId), item.progress).catch((err) => { notifyApiError('useBacklogEpisodes/tmdb', err); return null })
-          if (!ep?.air_date || ep.air_date >= weekStart) return
-          result.push({
-            itemId: item.id, title: item.title, coverImage: item.coverImage,
-            episode: ep.episode_number, season: ep.season_number,
-            episodeName: ep.name || undefined, airingDate: ep.air_date, type: 'series',
-          })
+      for (const { item, ep } of seriesEps) {
+        if (!ep?.air_date || ep.air_date >= weekStart) continue
+        result.push({
+          itemId: item.id, title: item.title, coverImage: item.coverImage,
+          episode: ep.episode_number, season: ep.season_number,
+          episodeName: ep.name || undefined, airingDate: ep.air_date, type: 'series',
         })
-      )
+      }
 
       result.sort((a, b) => b.airingDate.localeCompare(a.airingDate))
       return result
