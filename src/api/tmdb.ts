@@ -28,7 +28,7 @@ const TmdbMediaSchema = z.object({
   episode_run_time: z.array(z.number()).optional(),
 })
 
-export type TmdbMedia = z.infer<typeof TmdbMediaSchema>
+export type TmdbMedia = z.infer<typeof TmdbMediaSchema> & { _source: 'tmdb' }
 
 const TmdbEpisodeSchema = z.object({
   episode_number: z.number(),
@@ -142,7 +142,7 @@ async function searchByEndpoint(
   const results = data.results
     .map(r => TmdbMediaSchema.safeParse({ ...(r as object), media_type: mediaType }))
     .filter(r => r.success)
-    .map(r => r.data)
+    .map(r => ({ ...r.data, _source: 'tmdb' as const }))
   return { results, hasMore: data.page < data.total_pages }
 }
 

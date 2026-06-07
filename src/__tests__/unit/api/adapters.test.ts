@@ -17,6 +17,7 @@ const anilistMedia: AnilistMedia = {
   type: 'ANIME',
   status: 'FINISHED',
   nextAiringEpisode: null,
+  _source: 'anilist',
 }
 
 const tmdbSeries: TmdbMedia = {
@@ -26,6 +27,7 @@ const tmdbSeries: TmdbMedia = {
   media_type: 'tv',
   number_of_episodes: 62,
   episode_run_time: [47],
+  _source: 'tmdb',
 }
 
 const tmdbMovie: TmdbMedia = {
@@ -34,6 +36,7 @@ const tmdbMovie: TmdbMedia = {
   poster_path: '/fight-club.jpg',
   media_type: 'movie',
   runtime: 139,
+  _source: 'tmdb',
 }
 
 describe('extractDisplayInfo', () => {

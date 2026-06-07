@@ -8,7 +8,7 @@ import { useStore } from '@/store'
 import { searchMedia, type AnilistMedia } from '@/api/anilist'
 import { searchTv, searchMovie, type TmdbMedia } from '@/api/tmdb'
 import { resolveMediaMetadata, extractDisplayInfo, type MediaMetadata } from '@/api/adapters'
-import type { TrackedItem, AnimeItem, SeriesItem, MovieItem, MediaType } from '@/types'
+import type { TrackedItem, SeriesItem, MovieItem, MediaType } from '@/types'
 import { inferWatchStatus } from '@/lib/inferWatchStatus'
 
 type Pending = MediaMetadata & { result: AnilistMedia | TmdbMedia }
@@ -157,7 +157,7 @@ export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
     }
     let item: TrackedItem
     if (pending.type === 'anime') {
-      item = { ...base, type: 'anime', source: pending.source as AnimeItem['source'], malId: pending.malId }
+      item = { ...base, type: 'anime', source: 'anilist', malId: pending.malId }
     } else if (pending.type === 'series') {
       item = { ...base, type: 'series', source: 'tmdb' } satisfies SeriesItem
     } else {
