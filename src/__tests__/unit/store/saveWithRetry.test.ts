@@ -2,7 +2,7 @@ vi.mock('@/lib/firestore', () => ({ loadUserData: vi.fn(), saveUserData: vi.fn()
 
 import { FirebaseError } from 'firebase/app'
 import { saveUserData } from '@/lib/firestore'
-import { saveWithRetry } from '@/store'
+import { saveWithRetry } from '@/lib/saveWithRetry'
 
 beforeEach(() => vi.clearAllMocks())
 
