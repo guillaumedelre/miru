@@ -44,8 +44,7 @@ export default function MediaSheet({ item, open, onClose, initialTab = 'info' }:
       setResolvedTotal(item.totalEpisodes)
     }
     if (open) reset()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, item.id])
+  }, [open, item.id, initialTab, getWatchedForItem, item.totalEpisodes])
 
   function handleSaveProgress() {
     const episodes = Array.from(checked)

@@ -10,8 +10,24 @@ interface MediaInfo {
   watchProviders: TmdbWatchProviders
 }
 
+interface CacheEntry {
+  data: MediaInfo
+  cachedAt: number
+}
+
+const CACHE_TTL_MS = 60 * 60 * 1000
 const EMPTY_INFO: MediaInfo = { details: null, watchProviders: { providers: [], link: null } }
-const detailsCache = new Map<string, MediaInfo>()
+const detailsCache = new Map<string, CacheEntry>()
+
+function getFromCache(key: string): MediaInfo | null {
+  const entry = detailsCache.get(key)
+  if (!entry) return null
+  if (Date.now() - entry.cachedAt > CACHE_TTL_MS) {
+    detailsCache.delete(key)
+    return null
+  }
+  return entry.data
+}
 
 export function useMediaDetails(item: TrackedItem, open: boolean) {
   const { data: info, loading, run } = useAsyncState<MediaInfo>(EMPTY_INFO)
@@ -23,7 +39,8 @@ export function useMediaDetails(item: TrackedItem, open: boolean) {
     const cacheKey = `${item.source}-${item.sourceId}-${item.type}`
 
     run(async () => {
-      if (detailsCache.has(cacheKey)) return detailsCache.get(cacheKey)!
+      const cached = getFromCache(cacheKey)
+      if (cached) return cached
 
       let result: MediaInfo
       if (item.source === 'anilist') {
@@ -37,11 +54,10 @@ export function useMediaDetails(item: TrackedItem, open: boolean) {
         result = { details, watchProviders: watchProviders ?? { providers: [], link: null } }
       }
 
-      detailsCache.set(cacheKey, result)
+      detailsCache.set(cacheKey, { data: result, cachedAt: Date.now() })
       return result
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, item.sourceId, item.source, item.type])
+  }, [open, item.sourceId, item.source, item.type, run])
 
   return { details: info.details, watchProviders: info.watchProviders, loading }
 }
