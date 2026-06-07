@@ -32,6 +32,22 @@ describe('loadUserData', () => {
     expect(result?.items.map(i => i.id)).toEqual([animeItem.id, seriesItem.id])
   })
 
+  it('logs a warning when an item is discarded', async () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    mockSnap({ items: [{ bad: true }], watched: [] })
+    await loadUserData('user-1')
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('[firestore] invalid item'), expect.anything())
+    spy.mockRestore()
+  })
+
+  it('logs a warning when a watched episode is discarded', async () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    mockSnap({ items: [], watched: [{ missing: 'fields' }] })
+    await loadUserData('user-1')
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('[firestore] invalid episode'), expect.anything())
+    spy.mockRestore()
+  })
+
   it('returns empty items when all items fail validation', async () => {
     mockSnap({ items: [{ bad: true }, { also: 'bad' }], watched: [] })
     const result = await loadUserData('user-1')

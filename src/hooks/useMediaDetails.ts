@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { getAnilistDetails, type AnilistMediaDetails } from '@/api/anilist'
 import { getTmdbDetails, getWatchProviders, type TmdbDetails, type TmdbWatchProviders } from '@/api/tmdb'
 import { useAsyncState } from '@/hooks/useAsyncState'
-import { notifyEnrichment } from '@/lib/errors'
+import { notifyEnrichment, isNotFoundError } from '@/lib/errors'
 import type { TrackedItem } from '@/types'
 
 interface MediaInfo {
@@ -44,11 +44,17 @@ export function useMediaDetails(item: TrackedItem, open: boolean) {
 
       let result: MediaInfo
       if (item.source === 'anilist') {
-        const details = await getAnilistDetails(id).catch(() => null)
+        const details = await getAnilistDetails(id).catch((err) => {
+          if (!isNotFoundError(err)) notifyEnrichment('useMediaDetails/anilist', err)
+          return null
+        })
         result = { details, watchProviders: { providers: [], link: null } }
       } else {
         const [details, watchProviders] = await Promise.all([
-          getTmdbDetails(id, mediaType).catch(() => null),
+          getTmdbDetails(id, mediaType).catch((err) => {
+            if (!isNotFoundError(err)) notifyEnrichment('useMediaDetails/tmdb', err)
+            return null
+          }),
           getWatchProviders(id, mediaType).catch((err) => { notifyEnrichment('useMediaDetails/watch-providers', err); return null }),
         ])
         result = { details, watchProviders: watchProviders ?? { providers: [], link: null } }

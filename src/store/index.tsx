@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { create, type UseBoundStore, type StoreApi } from 'zustand'
+import { FirebaseError } from 'firebase/app'
 import { loadUserData, saveUserData } from '@/lib/firestore'
 import { notifyError } from '@/lib/errors'
 import { TrackedItemSchema, type TrackedItem, type TrackedItemPatch, type UserData, type WatchedEpisode } from '@/types'
@@ -65,17 +66,21 @@ function createMiruStore(): UseBoundStore<StoreApi<MiruStore>> {
   }))
 }
 
-async function saveWithRetry(userId: string, data: UserData, retries = 3): Promise<void> {
+function isNonRetryable(err: unknown): boolean {
+  return err instanceof FirebaseError &&
+    (err.code === 'permission-denied' || err.code === 'unauthenticated')
+}
+
+export async function saveWithRetry(userId: string, data: UserData, retries = 3): Promise<void> {
   for (let i = 0; i < retries; i++) {
     try {
       await saveUserData(userId, data)
       return
     } catch (err) {
-      if (i < retries - 1) {
-        await new Promise<void>((r) => setTimeout(r, 2000 * 2 ** i))
-      } else {
+      if (isNonRetryable(err) || i >= retries - 1) {
         throw err
       }
+      await new Promise<void>((r) => setTimeout(r, 2000 * 2 ** i))
     }
   }
 }

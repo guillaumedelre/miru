@@ -1,5 +1,5 @@
 import { toast } from 'sonner'
-import { notifyError, notifyApiError, notifyEnrichment } from '@/lib/errors'
+import { notifyError, notifyApiError, notifyEnrichment, isNotFoundError } from '@/lib/errors'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -88,5 +88,27 @@ describe('notifyEnrichment', () => {
     notifyEnrichment('X')
     notifyEnrichment('Y')
     expect(toast.info).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('isNotFoundError', () => {
+  it('returns true for Error with 404 in message', () => {
+    expect(isNotFoundError(new Error('TMDB 404: /movie/999'))).toBe(true)
+    expect(isNotFoundError(new Error('Jikan 404: /anime/0'))).toBe(true)
+  })
+
+  it('returns false for Error with other status codes', () => {
+    expect(isNotFoundError(new Error('TMDB 500: /movie/1'))).toBe(false)
+    expect(isNotFoundError(new Error('TMDB 403: /movie/1'))).toBe(false)
+  })
+
+  it('returns false for non-Error values', () => {
+    expect(isNotFoundError(null)).toBe(false)
+    expect(isNotFoundError('404')).toBe(false)
+    expect(isNotFoundError({ message: '404' })).toBe(false)
+  })
+
+  it('returns false for Error without 404', () => {
+    expect(isNotFoundError(new Error('network error'))).toBe(false)
   })
 })

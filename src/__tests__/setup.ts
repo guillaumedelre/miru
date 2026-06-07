@@ -31,9 +31,10 @@ vi.mock('firebase/firestore', () => ({
   setDoc: vi.fn(() => Promise.resolve()),
 }))
 
-vi.mock('firebase/app', () => ({
-  initializeApp: vi.fn(() => ({})),
-}))
+vi.mock('firebase/app', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('firebase/app')>()
+  return { ...actual, initializeApp: vi.fn(() => ({})) }
+})
 
 vi.mock('sonner', () => ({
   toast: {

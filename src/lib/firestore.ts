@@ -10,13 +10,21 @@ export async function loadUserData(userId: string): Promise<UserData | null> {
   const items = Array.isArray(raw?.items)
     ? raw.items.flatMap((item: unknown) => {
         const r = TrackedItemSchema.safeParse(item)
-        return r.success ? [r.data] : []
+        if (!r.success) {
+          console.warn('[firestore] invalid item discarded', r.error.issues)
+          return []
+        }
+        return [r.data]
       })
     : []
   const watched = Array.isArray(raw?.watched)
     ? raw.watched.flatMap((ep: unknown) => {
         const r = WatchedEpisodeSchema.safeParse(ep)
-        return r.success ? [r.data] : []
+        if (!r.success) {
+          console.warn('[firestore] invalid episode discarded', r.error.issues)
+          return []
+        }
+        return [r.data]
       })
     : []
 

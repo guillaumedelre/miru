@@ -4,7 +4,10 @@ const BASE = 'https://api.jikan.moe/v4'
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`)
-  if (!res.ok) throw new Error(`Jikan ${res.status}: ${path}`)
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`Jikan ${res.status}: ${path}${body ? ` — ${body}` : ''}`)
+  }
   return res.json()
 }
 
