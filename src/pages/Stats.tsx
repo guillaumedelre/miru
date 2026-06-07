@@ -4,6 +4,7 @@ import { getAnilistGenresBatch } from '@/api/anilist'
 import { getTmdbGenres } from '@/api/tmdb'
 import { formatDuration } from '@/lib/formatting'
 import { useAsyncState } from '@/hooks/useAsyncState'
+import { TYPE_LABEL_PLURAL, STATUS_LABEL } from '@/config/constants'
 
 interface StatCardProps {
   label: string
@@ -21,17 +22,6 @@ function StatCard({ label, value, sub }: StatCardProps) {
   )
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  anime: 'Animes',
-  series: 'Séries',
-  movie: 'Films',
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  watching: 'En cours',
-  completed: 'Terminé',
-  plan_to_watch: 'À voir',
-}
 
 export default function Stats() {
   const { items, watched } = useStore()
@@ -128,7 +118,7 @@ export default function Stats() {
           <p className="text-xs text-muted-foreground uppercase tracking-wide">Par type</p>
           {byType.map(([type, count]) => (
             <div key={type} className="flex items-center gap-3">
-              <span className="text-sm w-20 shrink-0">{TYPE_LABELS[type] ?? type}</span>
+              <span className="text-sm w-20 shrink-0">{TYPE_LABEL_PLURAL[type as keyof typeof TYPE_LABEL_PLURAL] ?? type}</span>
               <div className="flex-1 bg-muted rounded-full h-2">
                 <div
                   className="bg-primary h-2 rounded-full transition-all"
@@ -144,7 +134,7 @@ export default function Stats() {
           <p className="text-xs text-muted-foreground uppercase tracking-wide">Par statut</p>
           {byStatus.map(([status, count]) => (
             <div key={status} className="flex items-center gap-3">
-              <span className="text-sm w-20">{STATUS_LABELS[status] ?? status}</span>
+              <span className="text-sm w-20">{STATUS_LABEL[status as keyof typeof STATUS_LABEL] ?? status}</span>
               <div className="flex-1 bg-muted rounded-full h-2">
                 <div
                   className="bg-primary h-2 rounded-full"

@@ -7,6 +7,7 @@ import AddMediaDialog from '@/components/AddMediaDialog'
 import { useStore } from '@/store'
 import { useTopbarActions } from '@/contexts/TopbarActionsContext'
 import type { MediaType, Status } from '@/types'
+import { TYPE_LABEL_PLURAL, STATUS_LABEL } from '@/config/constants'
 
 
 type TypeFilter = 'all' | MediaType
@@ -14,15 +15,15 @@ type StatusFilter = 'all' | Status
 
 const TYPE_FILTERS: { value: TypeFilter; label: string }[] = [
   { value: 'all', label: 'Tout' },
-  { value: 'anime', label: 'Animes' },
-  { value: 'series', label: 'Séries' },
-  { value: 'movie', label: 'Films' },
+  { value: 'anime', label: TYPE_LABEL_PLURAL.anime },
+  { value: 'series', label: TYPE_LABEL_PLURAL.series },
+  { value: 'movie', label: TYPE_LABEL_PLURAL.movie },
 ]
 
 const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'Tous' },
-  { value: 'watching', label: 'En cours' },
-  { value: 'completed', label: 'Terminé' },
+  { value: 'watching', label: STATUS_LABEL.watching },
+  { value: 'completed', label: STATUS_LABEL.completed },
 ]
 
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
