@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useStore } from '@/store'
 import { getAnilistGenresBatch } from '@/api/anilist'
 import { getTmdbGenres } from '@/api/tmdb'
 import { formatDuration } from '@/lib/formatting'
+import { useAsyncState } from '@/hooks/useAsyncState'
 
 interface StatCardProps {
   label: string
@@ -61,15 +62,11 @@ export default function Stats() {
     )
   ).sort((a, b) => b[1] - a[1])
 
-  const [genreMap, setGenreMap] = useState<Record<string, string[]>>({})
-  const [loadingGenres, setLoadingGenres] = useState(false)
+  const { data: genreMap, loading: loadingGenres, run: loadGenres } = useAsyncState<Record<string, string[]>>({})
 
   useEffect(() => {
     if (items.length === 0) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoadingGenres(true)
-
-    async function fetchGenres() {
+    loadGenres(async () => {
       const map: Record<string, string[]> = {}
 
       const anilistItems = items.filter((i) => i.source === 'anilist')
@@ -91,11 +88,8 @@ export default function Stats() {
         })
       )
 
-      setGenreMap(map)
-      setLoadingGenres(false)
-    }
-
-    fetchGenres()
+      return map
+    })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items.length])
 
