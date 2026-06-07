@@ -90,8 +90,7 @@ export default function Stats() {
 
       return map
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items.length])
+  }, [items, loadGenres])
 
   const genreCounts = Object.values(genreMap)
     .flat()
