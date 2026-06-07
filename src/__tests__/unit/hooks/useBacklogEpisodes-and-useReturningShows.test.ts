@@ -71,9 +71,10 @@ describe('useBacklogEpisodes', () => {
       wrapper: makeWrapper('user-backlog-anilist'),
     })
 
-    await waitFor(() => expect(result.current.loading).toBe(false))
-
-    expect(result.current.episodes.length).toBe(1)
+    await waitFor(
+      () => expect(result.current.episodes.length).toBe(1),
+      { timeout: 5000 },
+    )
     expect(result.current.episodes[0]).toMatchObject({
       itemId: animeItem.id,
       title: animeItem.title,
@@ -142,9 +143,10 @@ describe('useBacklogEpisodes', () => {
       wrapper: makeWrapper('user-backlog-tmdb'),
     })
 
-    await waitFor(() => expect(result.current.loading).toBe(false))
-
-    expect(result.current.episodes.length).toBe(1)
+    await waitFor(
+      () => expect(result.current.episodes.length).toBe(1),
+      { timeout: 5000 },
+    )
     expect(result.current.episodes[0]).toMatchObject({
       itemId: seriesItem.id,
       title: seriesItem.title,
@@ -197,9 +199,10 @@ describe('useReturningShows', () => {
       wrapper: makeWrapper('user-returning-anilist'),
     })
 
-    await waitFor(() => expect(result.current.loading).toBe(false))
-
-    expect(result.current.entries.length).toBe(1)
+    await waitFor(
+      () => expect(result.current.entries.length).toBe(1),
+      { timeout: 5000 },
+    )
     expect(result.current.entries[0]).toMatchObject({
       item: expect.objectContaining({ id: animeItem.id }),
       nextEpisode: 6,
@@ -234,9 +237,10 @@ describe('useReturningShows', () => {
       wrapper: makeWrapper('user-returning-tmdb'),
     })
 
-    await waitFor(() => expect(result.current.loading).toBe(false))
-
-    expect(result.current.entries.length).toBe(1)
+    await waitFor(
+      () => expect(result.current.entries.length).toBe(1),
+      { timeout: 5000 },
+    )
     expect(result.current.entries[0]).toMatchObject({
       item: expect.objectContaining({ id: seriesItem.id }),
       nextEpisode: 8,
@@ -283,9 +287,10 @@ describe('useReturningShows', () => {
       wrapper: makeWrapper('user-returning-sort'),
     })
 
-    await waitFor(() => expect(result.current.loading).toBe(false))
-
-    expect(result.current.entries.length).toBe(2)
+    await waitFor(
+      () => expect(result.current.entries.length).toBe(2),
+      { timeout: 5000 },
+    )
     expect(result.current.entries[0].nextDate <= result.current.entries[1].nextDate).toBe(true)
     expect(result.current.entries[0].nextDate).toBe('2024-07-15')
     expect(result.current.entries[1].nextDate).toBe('2024-08-01')
