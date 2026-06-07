@@ -5,6 +5,7 @@ import { LogOut, CalendarDays, LayoutGrid, BarChart3, UserCircle, Tv, type Lucid
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import { StoreProvider } from '@/store'
 import { useUIStore } from '@/store/ui'
+import SaveIndicator from '@/components/SaveIndicator'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import WeekView from '@/pages/WeekView'
@@ -114,13 +115,15 @@ function AppShell() {
           {NAV_ITEMS.map(item => <DesktopNavItem key={item.to} {...item} />)}
         </div>
 
-        {/* Actions contextuelles (slot injecté par la page courante) - mobile uniquement */}
-        {actions && (
-          <div className="ml-auto sm:hidden flex items-center">{actions}</div>
-        )}
+        {/* Actions contextuelles + indicateur de sauvegarde - mobile uniquement */}
+        <div className="ml-auto sm:hidden flex items-center gap-2">
+          <SaveIndicator />
+          {actions}
+        </div>
 
-        {/* Avatar + logout direct - desktop */}
+        {/* Avatar + indicateur de sauvegarde + logout - desktop */}
         <div className="hidden sm:flex ml-auto items-center gap-3">
+          <SaveIndicator />
           {user.photoURL
             ? <img src={user.photoURL} alt="" referrerPolicy="no-referrer" className="w-7 h-7 rounded-full" />
             : <UserCircle size={20} className="text-muted-foreground" />

@@ -1,8 +1,8 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { create, type UseBoundStore, type StoreApi } from 'zustand'
 import { loadUserData, saveUserData } from '@/lib/firestore'
 import { notifyError } from '@/lib/errors'
-import type { TrackedItem, TrackedItemPatch, WatchedEpisode } from '@/types'
+import type { TrackedItem, TrackedItemPatch, UserData, WatchedEpisode } from '@/types'
 
 export interface MiruStore {
   items: TrackedItem[]
@@ -65,15 +65,38 @@ function createMiruStore(): UseBoundStore<StoreApi<MiruStore>> {
   }))
 }
 
+async function saveWithRetry(userId: string, data: UserData, retries = 3): Promise<void> {
+  for (let i = 0; i < retries; i++) {
+    try {
+      await saveUserData(userId, data)
+      return
+    } catch (err) {
+      if (i < retries - 1) {
+        await new Promise<void>((r) => setTimeout(r, 2000 * 2 ** i))
+      } else {
+        throw err
+      }
+    }
+  }
+}
+
+export type SaveStatus = 'idle' | 'saving' | 'error'
+const SaveStatusContext = createContext<SaveStatus>('idle')
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function useSaveStatus(): SaveStatus {
+  return useContext(SaveStatusContext)
+}
+
 const StoreContext = createContext<UseBoundStore<StoreApi<MiruStore>> | null>(null)
 
 export function StoreProvider({ userId, children }: { userId: string; children: ReactNode }) {
   const [store] = useState(createMiruStore)
   const [ready, setReady] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
+  const saveVersion = useRef(0)
 
   useEffect(() => {
-
-    // Charge les données depuis Firestore
     loadUserData(userId)
       .then((data) => {
         if (data) store.setState({ items: data.items, watched: data.watched })
@@ -81,13 +104,21 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
       .catch((err) => notifyError('Impossible de charger ta médiathèque.', err))
       .finally(() => setReady(true))
 
-    // Sauvegarde dans Firestore à chaque changement (débounce 1.5s)
     let timeout: ReturnType<typeof setTimeout>
     const unsub = store.subscribe((state) => {
       clearTimeout(timeout)
       timeout = setTimeout(() => {
-        saveUserData(userId, { items: state.items, watched: state.watched })
-          .catch((err) => notifyError('La sauvegarde a échoué.', err))
+        const ver = ++saveVersion.current
+        const data = { items: state.items, watched: state.watched }
+        setSaveStatus('saving')
+        saveWithRetry(userId, data)
+          .then(() => { if (ver === saveVersion.current) setSaveStatus('idle') })
+          .catch((err) => {
+            if (ver === saveVersion.current) {
+              notifyError('La sauvegarde a échoué.', err)
+              setSaveStatus('error')
+            }
+          })
       }, 1500)
     })
 
@@ -107,9 +138,11 @@ export function StoreProvider({ userId, children }: { userId: string; children: 
   }
 
   return (
-    <StoreContext.Provider value={store}>
-      {children}
-    </StoreContext.Provider>
+    <SaveStatusContext.Provider value={saveStatus}>
+      <StoreContext.Provider value={store}>
+        {children}
+      </StoreContext.Provider>
+    </SaveStatusContext.Provider>
   )
 }
 
