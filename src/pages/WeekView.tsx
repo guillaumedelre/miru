@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
 import DayRow from '@/components/DayRow'
 import { useWeeklySchedule, getWeekDates } from '@/hooks/useWeeklySchedule'
-import { useTopbarActions } from '@/contexts/TopbarActionsContext'
+import { useUIStore } from '@/store/ui'
 import { formatWeekRange } from '@/lib/formatting'
 
 function TodayIcon() {
@@ -29,7 +29,7 @@ export default function WeekView() {
   const [weekOffset, setWeekOffset] = useState(0)
   const { schedule, weekDates, loading } = useWeeklySchedule(weekOffset)
   const today = new Date().toLocaleDateString('sv-SE')
-  const { setActions } = useTopbarActions()
+  const setActions = useUIStore((s) => s.setTopbarActions)
 
   useEffect(() => {
     setActions(

@@ -3,8 +3,8 @@ import { Toaster } from 'sonner'
 import { BrowserRouter, NavLink, Route, Routes, Navigate, useLocation } from 'react-router-dom'
 import { LogOut, CalendarDays, LayoutGrid, BarChart3, UserCircle, Tv, type LucideIcon } from 'lucide-react'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
-import { TopbarActionsProvider, useTopbarActions } from '@/contexts/TopbarActionsContext'
 import { StoreProvider } from '@/store'
+import { useUIStore } from '@/store/ui'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import WeekView from '@/pages/WeekView'
@@ -74,7 +74,7 @@ function MobileNavItem({ to, end, icon: Icon, label, shortLabel }: NavItemDef) {
 
 function AppShell() {
   const { user, loading, logout } = useAuth()
-  const { actions } = useTopbarActions()
+  const actions = useUIStore((s) => s.topbarActions)
   const location = useLocation()
   const pageTitle = PAGE_TITLES[location.pathname] ?? ''
   const [confirmLogoutOpen, setConfirmLogoutOpen] = useState(false)
@@ -183,12 +183,10 @@ function AppShell() {
 export default function App() {
   return (
     <AuthProvider>
-      <TopbarActionsProvider>
-        <BrowserRouter>
-          <AppShell />
-          <Toaster position="bottom-center" richColors />
-        </BrowserRouter>
-      </TopbarActionsProvider>
+      <BrowserRouter>
+        <AppShell />
+        <Toaster position="bottom-center" richColors />
+      </BrowserRouter>
     </AuthProvider>
   )
 }

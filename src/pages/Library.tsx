@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import MediaCard from '@/components/MediaCard'
 import AddMediaDialog from '@/components/AddMediaDialog'
 import { useStore } from '@/store'
-import { useTopbarActions } from '@/contexts/TopbarActionsContext'
+import { useUIStore } from '@/store/ui'
 import { useState } from 'react'
 import type { MediaType, Status } from '@/types'
 import { TYPE_LABEL_PLURAL, STATUS_LABEL } from '@/config/constants'
@@ -50,7 +50,7 @@ export default function Library() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [flippedId, setFlippedId] = useState<string | null>(null)
-  const { setActions } = useTopbarActions()
+  const setActions = useUIStore((s) => s.setTopbarActions)
 
   const rawType = searchParams.get('type') ?? 'all'
   const rawStatus = searchParams.get('status') ?? 'all'
