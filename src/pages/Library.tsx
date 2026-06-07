@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
 import { X, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,12 +6,9 @@ import MediaCard from '@/components/MediaCard'
 import AddMediaDialog from '@/components/AddMediaDialog'
 import { useStore } from '@/store'
 import { useUIStore } from '@/store/ui'
+import { useLibraryFilters, type TypeFilter, type StatusFilter } from '@/hooks/useLibraryFilters'
 import { useState } from 'react'
-import type { MediaType, Status } from '@/types'
 import { TYPE_LABEL_PLURAL, STATUS_LABEL } from '@/config/constants'
-
-type TypeFilter = 'all' | MediaType
-type StatusFilter = 'all' | Status
 
 const TYPE_FILTERS: { value: TypeFilter; label: string }[] = [
   { value: 'all', label: 'Tout' },
@@ -26,9 +22,6 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'watching', label: STATUS_LABEL.watching },
   { value: 'completed', label: STATUS_LABEL.completed },
 ]
-
-const VALID_TYPES = new Set<string>(['all', 'anime', 'series', 'movie'])
-const VALID_STATUSES = new Set<string>(['all', 'watching', 'completed'])
 
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -47,26 +40,10 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
 
 export default function Library() {
   const items = useStore((s) => s.items)
-  const [searchParams, setSearchParams] = useSearchParams()
+  const { typeFilter, statusFilter, search, setParam } = useLibraryFilters()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [flippedId, setFlippedId] = useState<string | null>(null)
   const setActions = useUIStore((s) => s.setTopbarActions)
-
-  const rawType = searchParams.get('type') ?? 'all'
-  const rawStatus = searchParams.get('status') ?? 'all'
-  const search = searchParams.get('search') ?? ''
-
-  const typeFilter: TypeFilter = VALID_TYPES.has(rawType) ? (rawType as TypeFilter) : 'all'
-  const statusFilter: StatusFilter = VALID_STATUSES.has(rawStatus) ? (rawStatus as StatusFilter) : 'all'
-
-  function setParam(key: string, value: string) {
-    setSearchParams(prev => {
-      const next = new URLSearchParams(prev)
-      if (value === 'all' || value === '') next.delete(key)
-      else next.set(key, value)
-      return next
-    }, { replace: true })
-  }
 
   useEffect(() => {
     setActions(

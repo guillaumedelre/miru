@@ -7,24 +7,32 @@ import { notifyEnrichment } from '@/lib/errors'
 import { isAnimeItem, isSeriesItem, type MediaType } from '@/types'
 import type { AiringSlot } from '@/lib/fetchAiringData'
 
-// Module-level caches — partagés entre les instances du hook (WeekView et ToWatch)
-const anilistScheduleCache = new Map<string, Promise<AiringSlot[]>>()
-const tmdbNextEpisodeCache = new Map<string, ReturnType<typeof getNextEpisode>>()
+const SCHEDULE_CACHE_TTL_MS = 60 * 60 * 1000
+
+interface TimedEntry<T> {
+  value: T
+  cachedAt: number
+}
+
+const anilistScheduleCache = new Map<string, TimedEntry<Promise<AiringSlot[]>>>()
+const tmdbNextEpisodeCache = new Map<string, TimedEntry<ReturnType<typeof getNextEpisode>>>()
 
 function cachedAiringSchedule(ids: number[], weekStart: number, weekEnd: number): Promise<AiringSlot[]> {
   const key = `${[...ids].sort().join(',')}-${weekStart}-${weekEnd}`
-  if (!anilistScheduleCache.has(key)) {
-    anilistScheduleCache.set(key, getAiringSchedule(ids, weekStart, weekEnd).catch(() => []))
-  }
-  return anilistScheduleCache.get(key)!
+  const entry = anilistScheduleCache.get(key)
+  if (entry && Date.now() - entry.cachedAt < SCHEDULE_CACHE_TTL_MS) return entry.value
+  const promise = getAiringSchedule(ids, weekStart, weekEnd).catch(() => [])
+  anilistScheduleCache.set(key, { value: promise, cachedAt: Date.now() })
+  return promise
 }
 
 function cachedNextEpisode(sourceId: string, progress: number): ReturnType<typeof getNextEpisode> {
   const key = `${sourceId}-${progress}`
-  if (!tmdbNextEpisodeCache.has(key)) {
-    tmdbNextEpisodeCache.set(key, getNextEpisode(Number(sourceId), progress))
-  }
-  return tmdbNextEpisodeCache.get(key)!
+  const entry = tmdbNextEpisodeCache.get(key)
+  if (entry && Date.now() - entry.cachedAt < SCHEDULE_CACHE_TTL_MS) return entry.value
+  const promise = getNextEpisode(Number(sourceId), progress)
+  tmdbNextEpisodeCache.set(key, { value: promise, cachedAt: Date.now() })
+  return promise
 }
 
 export interface WeeklyEpisode {
