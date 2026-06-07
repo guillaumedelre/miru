@@ -1,4 +1,4 @@
-import { posterUrl, getTvSeasons, type TmdbMedia } from '@/api/tmdb'
+import { posterUrl, type TmdbMedia } from '@/api/tmdb'
 import { type AnilistMedia } from '@/api/anilist'
 import type { Source, MediaType } from '@/types'
 
@@ -31,10 +31,18 @@ export function extractDisplayInfo(result: AnilistMedia | TmdbMedia): MediaDispl
   }
 }
 
-export async function resolveMediaMetadata(
+export interface TvDetails {
+  seasons: { episode_count: number }[]
+  isFinished: boolean
+}
+
+export type Pending = MediaMetadata & { result: AnilistMedia | TmdbMedia }
+
+export function resolveMediaMetadata(
   result: AnilistMedia | TmdbMedia,
   tab: MediaType,
-): Promise<MediaMetadata> {
+  tvDetails?: TvDetails | null,
+): MediaMetadata {
   const { title, image, source } = extractDisplayInfo(result)
 
   let totalEpisodes: number | undefined
@@ -48,10 +56,10 @@ export async function resolveMediaMetadata(
     if (result.idMal) malId = result.idMal
     if (result.duration) episodeDuration = result.duration
   } else if (tab === 'series') {
-    totalEpisodes = result.number_of_episodes
-    const details = await getTvSeasons(Number(result.id)).catch(() => null)
-    isFinished = details?.isFinished ?? false
-    if (details) totalEpisodes = details.seasons.reduce((s, season) => s + season.episode_count, 0)
+    isFinished = tvDetails?.isFinished ?? false
+    totalEpisodes = tvDetails
+      ? tvDetails.seasons.reduce((s, season) => s + season.episode_count, 0)
+      : result.number_of_episodes
     if (result.episode_run_time?.length) episodeDuration = result.episode_run_time[0]
   } else {
     isFinished = true

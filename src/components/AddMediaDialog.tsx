@@ -1,17 +1,14 @@
 import { useReducer, useEffect, useRef } from 'react'
-import { Sheet, SheetClose, SheetBody } from '@/components/ui/sheet'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import ProgressPicker from '@/components/ProgressPicker'
+import { Sheet, SheetClose } from '@/components/ui/sheet'
 import { useStore } from '@/store'
 import { searchMedia, type AnilistMedia } from '@/api/anilist'
-import { searchTv, searchMovie, type TmdbMedia } from '@/api/tmdb'
-import { resolveMediaMetadata, extractDisplayInfo, type MediaMetadata } from '@/api/adapters'
+import { searchTv, searchMovie, getTvSeasons, type TmdbMedia } from '@/api/tmdb'
+import { resolveMediaMetadata, type Pending } from '@/api/adapters'
+import SearchPanel from '@/components/add-media/SearchPanel'
+import ResultList from '@/components/add-media/ResultList'
+import ConfirmPanel from '@/components/add-media/ConfirmPanel'
 import type { TrackedItem, SeriesItem, MovieItem, MediaType } from '@/types'
 import { inferWatchStatus } from '@/lib/inferWatchStatus'
-
-type Pending = MediaMetadata & { result: AnilistMedia | TmdbMedia }
 
 interface State {
   tab: MediaType
@@ -132,7 +129,10 @@ export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
   }
 
   async function handleSelect(result: AnilistMedia | TmdbMedia) {
-    const meta = await resolveMediaMetadata(result, tab)
+    const tvDetails = (result._source === 'tmdb' && tab === 'series')
+      ? await getTvSeasons(Number(result.id)).catch(() => null)
+      : null
+    const meta = resolveMediaMetadata(result, tab, tvDetails)
     dispatch({ type: 'SELECT_RESULT', pending: { ...meta, result } })
   }
 
@@ -172,111 +172,36 @@ export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
     onClose()
   }
 
-  const showPicker = pending && pending.type !== 'movie'
-
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetClose />
 
       {pending ? (
-        <>
-          {/* En-tête : cover + titre */}
-          <div className="shrink-0 flex gap-4 px-6 pt-6 pb-4 border-b border-border">
-            <img src={pending.image} alt="" className="w-20 h-28 object-cover rounded-lg shrink-0 shadow-md" />
-            <div className="flex flex-col justify-center gap-2 min-w-0 pr-8">
-              <h2 className="text-base font-semibold leading-tight">{pending.title}</h2>
-              {pending.totalEpisodes && (
-                <p className="text-xs text-muted-foreground">{pending.totalEpisodes} épisodes au total</p>
-              )}
-              {watchedEps.size > 0 && (
-                <p className="text-xs text-primary font-semibold">
-                  {watchedEps.size} épisode{watchedEps.size > 1 ? 's' : ''} coché{watchedEps.size > 1 ? 's' : ''}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* ProgressPicker scrollable */}
-          {showPicker && (
-            <SheetBody className="px-6 py-4">
-              <ProgressPicker
-                sourceId={String(pending.result.id)}
-                source={pending.source}
-                type={pending.type}
-                totalEpisodes={pending.totalEpisodes}
-                malId={pending.malId}
-                checked={watchedEps}
-                onChange={(eps) => dispatch({ type: 'SET_WATCHED_EPS', watchedEps: eps })}
-                onTotalResolved={(total) => dispatch({ type: 'RESOLVE_TOTAL', total })}
-              />
-            </SheetBody>
-          )}
-
-          {/* Footer */}
-          <div className="shrink-0 flex gap-2 justify-end px-6 py-4 border-t border-border mt-auto">
-            <Button variant="ghost" onClick={() => dispatch({ type: 'BACK' })}>Retour</Button>
-            <Button onClick={handleConfirm}>Ajouter</Button>
-          </div>
-        </>
+        <ConfirmPanel
+          pending={pending}
+          watchedEps={watchedEps}
+          onWatchedChange={(eps) => dispatch({ type: 'SET_WATCHED_EPS', watchedEps: eps })}
+          onTotalResolved={(total) => dispatch({ type: 'RESOLVE_TOTAL', total })}
+          onBack={() => dispatch({ type: 'BACK' })}
+          onConfirm={handleConfirm}
+        />
       ) : (
         <>
-          {/* En-tête : titre + onglets + recherche */}
-          <div className="shrink-0 px-6 pt-6 pb-4 border-b border-border space-y-4">
-            <h2 className="text-base font-semibold pr-10">Ajouter un média</h2>
-            <Tabs value={tab} onValueChange={(v) => dispatch({ type: 'CHANGE_TAB', tab: v as MediaType })}>
-              <TabsList className="w-full">
-                <TabsTrigger value="anime" className="flex-1">Anime</TabsTrigger>
-                <TabsTrigger value="series" className="flex-1">Série</TabsTrigger>
-                <TabsTrigger value="movie" className="flex-1">Film</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <Input
-              placeholder="Rechercher..."
-              value={query}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch({ type: 'SET_QUERY', query: e.target.value })}
-              autoFocus
-            />
-          </div>
-
-          {/* Résultats scrollables */}
-          <SheetBody className="px-6 py-4 space-y-2">
-            {loading && results.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-6">Recherche...</p>
-            )}
-            {!loading && results.length === 0 && query.trim() && (
-              <p className="text-sm text-muted-foreground text-center py-6">Aucun résultat</p>
-            )}
-            {!loading && results.length === 0 && !query.trim() && (
-              <p className="text-sm text-muted-foreground text-center py-6">Tape un titre pour rechercher.</p>
-            )}
-            {results.map((r) => {
-              const { title, image, source } = extractDisplayInfo(r)
-              const id = r.id
-              const alreadyAdded = items.some((i) => i.sourceId === String(id) && i.source === source)
-
-              return (
-                <Button
-                  key={id}
-                  variant="ghost"
-                  className="w-full h-auto justify-start gap-3 px-2 py-2 disabled:opacity-60"
-                  disabled={alreadyAdded}
-                  onClick={() => !alreadyAdded && handleSelect(r)}
-                >
-                  <img src={image} alt="" className="w-10 h-14 object-cover rounded shrink-0" />
-                  <span className="text-left text-sm font-medium leading-tight flex-1 min-w-0 whitespace-normal line-clamp-2">{title}</span>
-                  {alreadyAdded && <span className="text-xs text-muted-foreground shrink-0">Déjà ajouté</span>}
-                </Button>
-              )
-            })}
-            {hasMore && !loading && (
-              <Button variant="outline" className="w-full mt-2" onClick={handleLoadMore}>
-                Charger plus
-              </Button>
-            )}
-            {loading && results.length > 0 && (
-              <p className="text-sm text-muted-foreground text-center py-2">Chargement...</p>
-            )}
-          </SheetBody>
+          <SearchPanel
+            tab={tab}
+            query={query}
+            onTabChange={(t) => dispatch({ type: 'CHANGE_TAB', tab: t })}
+            onQueryChange={(q) => dispatch({ type: 'SET_QUERY', query: q })}
+          />
+          <ResultList
+            results={results}
+            loading={loading}
+            query={query}
+            hasMore={hasMore}
+            existingItems={items}
+            onSelect={handleSelect}
+            onLoadMore={handleLoadMore}
+          />
         </>
       )}
     </Sheet>

@@ -1,10 +1,6 @@
-import { http, HttpResponse } from 'msw'
-import { server } from '@/__tests__/mocks/server'
 import { extractDisplayInfo, resolveMediaMetadata } from '@/api/adapters'
 import type { AnilistMedia } from '@/api/anilist'
 import type { TmdbMedia } from '@/api/tmdb'
-
-const TMDB_BASE = 'https://api.themoviedb.org/3'
 
 const anilistMedia: AnilistMedia = {
   id: 101,
@@ -90,146 +86,124 @@ describe('extractDisplayInfo', () => {
 
 describe('resolveMediaMetadata', () => {
   describe('anime tab (AniList)', () => {
-    it('extracts episodes as totalEpisodes', async () => {
-      const meta = await resolveMediaMetadata(anilistMedia, 'anime')
-      expect(meta.totalEpisodes).toBe(25)
+    it('extracts episodes as totalEpisodes', () => {
+      expect(resolveMediaMetadata(anilistMedia, 'anime').totalEpisodes).toBe(25)
     })
 
-    it('falls back to chapters when episodes is null', async () => {
+    it('falls back to chapters when episodes is null', () => {
       const manga = { ...anilistMedia, episodes: null, chapters: 100 }
-      const meta = await resolveMediaMetadata(manga, 'anime')
-      expect(meta.totalEpisodes).toBe(100)
+      expect(resolveMediaMetadata(manga, 'anime').totalEpisodes).toBe(100)
     })
 
-    it('sets isFinished=true for status FINISHED', async () => {
-      const meta = await resolveMediaMetadata(anilistMedia, 'anime')
-      expect(meta.isFinished).toBe(true)
+    it('sets isFinished=true for status FINISHED', () => {
+      expect(resolveMediaMetadata(anilistMedia, 'anime').isFinished).toBe(true)
     })
 
-    it('sets isFinished=true for status CANCELLED', async () => {
+    it('sets isFinished=true for status CANCELLED', () => {
       const cancelled = { ...anilistMedia, status: 'CANCELLED' }
-      const meta = await resolveMediaMetadata(cancelled, 'anime')
-      expect(meta.isFinished).toBe(true)
+      expect(resolveMediaMetadata(cancelled, 'anime').isFinished).toBe(true)
     })
 
-    it('sets isFinished=false for status RELEASING', async () => {
+    it('sets isFinished=false for status RELEASING', () => {
       const releasing = { ...anilistMedia, status: 'RELEASING' }
-      const meta = await resolveMediaMetadata(releasing, 'anime')
-      expect(meta.isFinished).toBe(false)
+      expect(resolveMediaMetadata(releasing, 'anime').isFinished).toBe(false)
     })
 
-    it('extracts malId from idMal', async () => {
-      const meta = await resolveMediaMetadata(anilistMedia, 'anime')
-      expect(meta.malId).toBe(16498)
+    it('extracts malId from idMal', () => {
+      expect(resolveMediaMetadata(anilistMedia, 'anime').malId).toBe(16498)
     })
 
-    it('omits malId when idMal is null', async () => {
+    it('omits malId when idMal is null', () => {
       const noMal = { ...anilistMedia, idMal: null }
-      const meta = await resolveMediaMetadata(noMal, 'anime')
-      expect(meta.malId).toBeUndefined()
+      expect(resolveMediaMetadata(noMal, 'anime').malId).toBeUndefined()
     })
 
-    it('extracts duration as episodeDuration', async () => {
-      const meta = await resolveMediaMetadata(anilistMedia, 'anime')
-      expect(meta.episodeDuration).toBe(24)
+    it('extracts duration as episodeDuration', () => {
+      expect(resolveMediaMetadata(anilistMedia, 'anime').episodeDuration).toBe(24)
     })
 
-    it('omits episodeDuration when duration is null', async () => {
+    it('omits episodeDuration when duration is null', () => {
       const noDuration = { ...anilistMedia, duration: null }
-      const meta = await resolveMediaMetadata(noDuration, 'anime')
-      expect(meta.episodeDuration).toBeUndefined()
+      expect(resolveMediaMetadata(noDuration, 'anime').episodeDuration).toBeUndefined()
     })
 
-    it('returns type = anime and source = anilist', async () => {
-      const meta = await resolveMediaMetadata(anilistMedia, 'anime')
+    it('returns type = anime and source = anilist', () => {
+      const meta = resolveMediaMetadata(anilistMedia, 'anime')
       expect(meta.type).toBe('anime')
       expect(meta.source).toBe('anilist')
     })
   })
 
   describe('series tab (TMDB)', () => {
-    it('calls getTvSeasons and sums episode_count for totalEpisodes', async () => {
-      server.use(
-        http.get(`${TMDB_BASE}/tv/:id`, () =>
-          HttpResponse.json({
-            name: 'BB', overview: '', poster_path: '/', backdrop_path: null, genres: [],
-            vote_average: 9, number_of_seasons: 1, number_of_episodes: 62,
-            first_air_date: '2008-01-20', status: 'Ended',
-            seasons: [
-              { season_number: 1, episode_count: 7, name: 'S1' },
-              { season_number: 2, episode_count: 13, name: 'S2' },
-            ],
-          })
-        )
-      )
-      const meta = await resolveMediaMetadata(tmdbSeries, 'series')
+    const endedTv = {
+      seasons: [{ episode_count: 7 }, { episode_count: 13 }],
+      isFinished: true,
+    }
+    const ongoingTv = {
+      seasons: [{ episode_count: 10 }],
+      isFinished: false,
+    }
+
+    it('sums season episode_count for totalEpisodes when tvDetails provided', () => {
+      const meta = resolveMediaMetadata(tmdbSeries, 'series', endedTv)
       expect(meta.totalEpisodes).toBe(20)
     })
 
-    it('sets isFinished=true when status is Ended', async () => {
-      const meta = await resolveMediaMetadata(tmdbSeries, 'series')
-      expect(meta.isFinished).toBe(true)
+    it('falls back to number_of_episodes when tvDetails is null', () => {
+      const meta = resolveMediaMetadata(tmdbSeries, 'series', null)
+      expect(meta.totalEpisodes).toBe(62)
     })
 
-    it('sets isFinished=false when status is Returning Series', async () => {
-      server.use(
-        http.get(`${TMDB_BASE}/tv/:id`, () =>
-          HttpResponse.json({
-            name: 'BB', overview: '', poster_path: '/', backdrop_path: null, genres: [],
-            vote_average: 9, number_of_seasons: 1, number_of_episodes: 10,
-            first_air_date: '2020-01-01', status: 'Returning Series',
-            seasons: [{ season_number: 1, episode_count: 10, name: 'S1' }],
-          })
-        )
-      )
-      const meta = await resolveMediaMetadata(tmdbSeries, 'series')
-      expect(meta.isFinished).toBe(false)
+    it('sets isFinished=true from tvDetails', () => {
+      expect(resolveMediaMetadata(tmdbSeries, 'series', endedTv).isFinished).toBe(true)
     })
 
-    it('extracts episode_run_time[0] as episodeDuration', async () => {
-      const meta = await resolveMediaMetadata(tmdbSeries, 'series')
-      expect(meta.episodeDuration).toBe(47)
+    it('sets isFinished=false from tvDetails', () => {
+      expect(resolveMediaMetadata(tmdbSeries, 'series', ongoingTv).isFinished).toBe(false)
     })
 
-    it('omits episodeDuration when episode_run_time is absent', async () => {
+    it('sets isFinished=false when tvDetails is null', () => {
+      expect(resolveMediaMetadata(tmdbSeries, 'series', null).isFinished).toBe(false)
+    })
+
+    it('extracts episode_run_time[0] as episodeDuration', () => {
+      expect(resolveMediaMetadata(tmdbSeries, 'series', endedTv).episodeDuration).toBe(47)
+    })
+
+    it('omits episodeDuration when episode_run_time is absent', () => {
       const noRuntime = { ...tmdbSeries, episode_run_time: undefined }
-      const meta = await resolveMediaMetadata(noRuntime, 'series')
-      expect(meta.episodeDuration).toBeUndefined()
+      expect(resolveMediaMetadata(noRuntime, 'series', endedTv).episodeDuration).toBeUndefined()
     })
 
-    it('returns type = series and source = tmdb', async () => {
-      const meta = await resolveMediaMetadata(tmdbSeries, 'series')
+    it('returns type = series and source = tmdb', () => {
+      const meta = resolveMediaMetadata(tmdbSeries, 'series', endedTv)
       expect(meta.type).toBe('series')
       expect(meta.source).toBe('tmdb')
     })
   })
 
   describe('movie tab (TMDB)', () => {
-    it('sets isFinished=true', async () => {
-      const meta = await resolveMediaMetadata(tmdbMovie, 'movie')
-      expect(meta.isFinished).toBe(true)
+    it('sets isFinished=true', () => {
+      expect(resolveMediaMetadata(tmdbMovie, 'movie').isFinished).toBe(true)
     })
 
-    it('extracts runtime as episodeDuration', async () => {
-      const meta = await resolveMediaMetadata(tmdbMovie, 'movie')
-      expect(meta.episodeDuration).toBe(139)
+    it('extracts runtime as episodeDuration', () => {
+      expect(resolveMediaMetadata(tmdbMovie, 'movie').episodeDuration).toBe(139)
     })
 
-    it('omits episodeDuration when runtime is absent', async () => {
+    it('omits episodeDuration when runtime is absent', () => {
       const noRuntime = { ...tmdbMovie, runtime: undefined }
-      const meta = await resolveMediaMetadata(noRuntime, 'movie')
-      expect(meta.episodeDuration).toBeUndefined()
+      expect(resolveMediaMetadata(noRuntime, 'movie').episodeDuration).toBeUndefined()
     })
 
-    it('returns type = movie and source = tmdb', async () => {
-      const meta = await resolveMediaMetadata(tmdbMovie, 'movie')
+    it('returns type = movie and source = tmdb', () => {
+      const meta = resolveMediaMetadata(tmdbMovie, 'movie')
       expect(meta.type).toBe('movie')
       expect(meta.source).toBe('tmdb')
     })
 
-    it('totalEpisodes is undefined for movies', async () => {
-      const meta = await resolveMediaMetadata(tmdbMovie, 'movie')
-      expect(meta.totalEpisodes).toBeUndefined()
+    it('totalEpisodes is undefined for movies', () => {
+      expect(resolveMediaMetadata(tmdbMovie, 'movie').totalEpisodes).toBeUndefined()
     })
   })
 })

@@ -1,9 +1,9 @@
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useContext, useState, type ReactNode } from 'react'
 import { create, type UseBoundStore, type StoreApi } from 'zustand'
-import { loadUserData } from '@/lib/firestore'
-import { saveWithRetry } from '@/lib/saveWithRetry'
-import { notifyError } from '@/lib/errors'
+import { usePersistence } from '@/store/usePersistence'
 import { TrackedItemSchema, type TrackedItem, type TrackedItemPatch, type WatchedEpisode } from '@/types'
+
+export type { SaveStatus } from '@/store/usePersistence'
 
 export interface MiruStore {
   items: TrackedItem[]
@@ -66,7 +66,7 @@ function createMiruStore(): UseBoundStore<StoreApi<MiruStore>> {
   }))
 }
 
-export type SaveStatus = 'idle' | 'saving' | 'error'
+import type { SaveStatus } from '@/store/usePersistence'
 const SaveStatusContext = createContext<SaveStatus>('idle')
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -78,41 +78,7 @@ const StoreContext = createContext<UseBoundStore<StoreApi<MiruStore>> | null>(nu
 
 export function StoreProvider({ userId, children }: { userId: string; children: ReactNode }) {
   const [store] = useState(createMiruStore)
-  const [ready, setReady] = useState(false)
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle')
-  const saveVersion = useRef(0)
-
-  useEffect(() => {
-    loadUserData(userId)
-      .then((data) => {
-        if (data) store.setState({ items: data.items, watched: data.watched })
-      })
-      .catch((err) => notifyError('Impossible de charger ta médiathèque.', err))
-      .finally(() => setReady(true))
-
-    let timeout: ReturnType<typeof setTimeout>
-    const unsub = store.subscribe((state) => {
-      clearTimeout(timeout)
-      timeout = setTimeout(() => {
-        const ver = ++saveVersion.current
-        const data = { items: state.items, watched: state.watched }
-        setSaveStatus('saving')
-        saveWithRetry(userId, data)
-          .then(() => { if (ver === saveVersion.current) setSaveStatus('idle') })
-          .catch((err) => {
-            if (ver === saveVersion.current) {
-              notifyError('La sauvegarde a échoué.', err)
-              setSaveStatus('error')
-            }
-          })
-      }, 1500)
-    })
-
-    return () => {
-      unsub()
-      clearTimeout(timeout)
-    }
-  }, [userId, store])
+  const { ready, saveStatus } = usePersistence(userId, store)
 
   if (!ready) {
     return (
