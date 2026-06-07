@@ -9,7 +9,7 @@ async function query<T>(q: string, variables: Record<string, unknown> = {}): Pro
     body: JSON.stringify({ query: q, variables }),
   })
   const json = await res.json()
-  if (json.errors) throw new Error(json.errors[0].message)
+  if (json.errors) throw new Error((json.errors as { message: string }[]).map(e => e.message).join('; '))
   return json.data
 }
 

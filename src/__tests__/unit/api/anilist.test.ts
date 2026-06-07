@@ -69,7 +69,7 @@ describe('searchMedia', () => {
     expect(hasMore).toBe(true)
   })
 
-  it('throws when GraphQL returns errors', async () => {
+  it('throws when GraphQL returns a single error', async () => {
     server.use(
       http.post(ANILIST_ENDPOINT, async () =>
         HttpResponse.json({ errors: [{ message: 'Not found' }] })
@@ -77,6 +77,39 @@ describe('searchMedia', () => {
     )
 
     await expect(searchMedia('unknown', 'ANIME')).rejects.toThrow('Not found')
+  })
+
+  it('joins multiple GraphQL errors with semicolon', async () => {
+    server.use(
+      http.post(ANILIST_ENDPOINT, async () =>
+        HttpResponse.json({ errors: [{ message: 'Error one' }, { message: 'Error two' }] })
+      )
+    )
+
+    await expect(searchMedia('unknown', 'ANIME')).rejects.toThrow('Error one; Error two')
+  })
+
+  it('tags returned media with _source: anilist', async () => {
+    server.use(
+      http.post(ANILIST_ENDPOINT, async () =>
+        HttpResponse.json({
+          data: {
+            Page: {
+              pageInfo: { hasNextPage: false },
+              media: [{
+                id: 1, idMal: null,
+                title: { romaji: 'Test', english: null },
+                coverImage: { large: 'https://img.example.com/test.jpg' },
+                episodes: 12, chapters: null, duration: 24,
+                type: 'ANIME', status: 'FINISHED', nextAiringEpisode: null,
+              }],
+            },
+          },
+        })
+      )
+    )
+    const { media } = await searchMedia('Test', 'ANIME')
+    expect(media[0]._source).toBe('anilist')
   })
 
   it('throws on invalid response shape (zod parse error)', async () => {

@@ -8,7 +8,10 @@ async function get<T>(path: string, params: Record<string, string> = {}): Promis
   url.searchParams.set('api_key', API_KEY)
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v)
   const res = await fetch(url.toString())
-  if (!res.ok) throw new Error(`TMDB ${res.status}: ${path}`)
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`TMDB ${res.status}: ${path}${body ? ` — ${body}` : ''}`)
+  }
   return res.json()
 }
 

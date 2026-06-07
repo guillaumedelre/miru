@@ -14,3 +14,7 @@ export function notifyEnrichment(context: string, err?: unknown): void {
   console.info(`[${context}]`, err)
   toast.info('Des informations complémentaires sont indisponibles.')
 }
+
+export function isNotFoundError(err: unknown): boolean {
+  return err instanceof Error && /\b404\b/.test(err.message)
+}

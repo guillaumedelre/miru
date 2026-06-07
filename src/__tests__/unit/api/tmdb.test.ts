@@ -44,11 +44,18 @@ describe('getTmdbDetails', () => {
     expect(result.status).toBe('Ended')
   })
 
-  it('throws on HTTP error', async () => {
+  it('throws on HTTP error with status in message', async () => {
     server.use(
       http.get(`${BASE}/movie/:id`, () => HttpResponse.json({ error: 'Not found' }, { status: 500 }))
     )
     await expect(getTmdbDetails(999, 'movie')).rejects.toThrow('TMDB 500')
+  })
+
+  it('includes response body in error message', async () => {
+    server.use(
+      http.get(`${BASE}/movie/:id`, () => HttpResponse.text('Resource not found', { status: 404 }))
+    )
+    await expect(getTmdbDetails(999, 'movie')).rejects.toThrow('Resource not found')
   })
 })
 
