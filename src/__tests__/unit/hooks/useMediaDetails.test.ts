@@ -134,6 +134,63 @@ describe('useMediaDetails', () => {
   })
 
   describe('caching', () => {
+    it('re-fetches after TTL expires', async () => {
+      const item = baseAnime('9010')
+      let callCount = 0
+
+      server.use(
+        http.post('https://graphql.anilist.co', async ({ request }) => {
+          const body = await request.json() as { query: string; variables: Record<string, unknown> }
+          if (body.query.includes('Media(id') || ('id' in (body.variables ?? {}) && !body.variables['search'])) {
+            callCount++
+            return HttpResponse.json({
+              data: {
+                Media: {
+                  id: 9010,
+                  title: { romaji: 'TTL Anime', english: null },
+                  description: '',
+                  coverImage: { extraLarge: '', large: '' },
+                  bannerImage: null,
+                  genres: [],
+                  averageScore: 75,
+                  episodes: 12,
+                  duration: 24,
+                  status: 'FINISHED',
+                  startDate: { year: 2020 },
+                  studios: { nodes: [] },
+                  externalLinks: [],
+                },
+              },
+            })
+          }
+          return HttpResponse.json({ data: { Page: { media: [] } } })
+        })
+      )
+
+      const realNow = Date.now()
+      const nowSpy = vi.spyOn(Date, 'now')
+
+      // First fetch at T=0
+      nowSpy.mockReturnValue(realNow)
+      const { result: result1 } = renderHook(() => useMediaDetails(item, true))
+      await waitFor(() => expect(result1.current.loading).toBe(false))
+      expect(callCount).toBe(1)
+
+      // Simulate cache still fresh (T + 30 min) — no re-fetch
+      nowSpy.mockReturnValue(realNow + 30 * 60 * 1000)
+      const { result: result2 } = renderHook(() => useMediaDetails(item, true))
+      await waitFor(() => expect(result2.current.loading).toBe(false))
+      expect(callCount).toBe(1)
+
+      // Simulate cache expired (T + 1h + 1s) — re-fetch
+      nowSpy.mockReturnValue(realNow + 60 * 60 * 1000 + 1000)
+      const { result: result3 } = renderHook(() => useMediaDetails(item, true))
+      await waitFor(() => expect(result3.current.loading).toBe(false))
+      expect(callCount).toBe(2)
+
+      nowSpy.mockRestore()
+    })
+
     it('does not trigger a new fetch on second render for the same item', async () => {
       const item = baseAnime('9004')
       let callCount = 0
