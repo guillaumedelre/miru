@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { X, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -6,9 +7,9 @@ import MediaCard from '@/components/MediaCard'
 import AddMediaDialog from '@/components/AddMediaDialog'
 import { useStore } from '@/store'
 import { useTopbarActions } from '@/contexts/TopbarActionsContext'
+import { useState } from 'react'
 import type { MediaType, Status } from '@/types'
 import { TYPE_LABEL_PLURAL, STATUS_LABEL } from '@/config/constants'
-
 
 type TypeFilter = 'all' | MediaType
 type StatusFilter = 'all' | Status
@@ -25,6 +26,9 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'watching', label: STATUS_LABEL.watching },
   { value: 'completed', label: STATUS_LABEL.completed },
 ]
+
+const VALID_TYPES = new Set<string>(['all', 'anime', 'series', 'movie'])
+const VALID_STATUSES = new Set<string>(['all', 'watching', 'completed'])
 
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
@@ -43,12 +47,26 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
 
 export default function Library() {
   const items = useStore((s) => s.items)
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-  const [search, setSearch] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [flippedId, setFlippedId] = useState<string | null>(null)
   const { setActions } = useTopbarActions()
+
+  const rawType = searchParams.get('type') ?? 'all'
+  const rawStatus = searchParams.get('status') ?? 'all'
+  const search = searchParams.get('search') ?? ''
+
+  const typeFilter: TypeFilter = VALID_TYPES.has(rawType) ? (rawType as TypeFilter) : 'all'
+  const statusFilter: StatusFilter = VALID_STATUSES.has(rawStatus) ? (rawStatus as StatusFilter) : 'all'
+
+  function setParam(key: string, value: string) {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (value === 'all' || value === '') next.delete(key)
+      else next.set(key, value)
+      return next
+    }, { replace: true })
+  }
 
   useEffect(() => {
     setActions(
@@ -71,12 +89,12 @@ export default function Library() {
           <Input
             placeholder="Rechercher..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => setParam('search', e.target.value)}
             className={search ? 'pr-8' : ''}
           />
           {search && (
             <button
-              onClick={() => setSearch('')}
+              onClick={() => setParam('search', '')}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               aria-label="Effacer la recherche"
             >
@@ -87,13 +105,13 @@ export default function Library() {
 
         <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] pb-px">
           {TYPE_FILTERS.map(f => (
-            <Chip key={f.value} active={typeFilter === f.value} onClick={() => setTypeFilter(f.value)}>
+            <Chip key={f.value} active={typeFilter === f.value} onClick={() => setParam('type', f.value)}>
               {f.label}
             </Chip>
           ))}
           <div className="w-px bg-border shrink-0 mx-1" />
           {STATUS_FILTERS.map(f => (
-            <Chip key={f.value} active={statusFilter === f.value} onClick={() => setStatusFilter(f.value)}>
+            <Chip key={f.value} active={statusFilter === f.value} onClick={() => setParam('status', f.value)}>
               {f.label}
             </Chip>
           ))}
