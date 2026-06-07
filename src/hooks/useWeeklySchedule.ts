@@ -75,17 +75,20 @@ export function useWeeklySchedule(weekOffset = 0) {
   const prevKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
-    const watching = items.filter((i) => i.status === 'watching')
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (watching.length === 0) { setSchedule(new Map()); prevKeyRef.current = watchingKey; return }
+    async function fetchSchedule() {
+      const watching = items.filter((i) => i.status === 'watching')
+      if (watching.length === 0) {
+        setSchedule(new Map())
+        prevKeyRef.current = watchingKey
+        return
+      }
 
-    // Évite un re-fetch si rien de pertinent n'a changé (ex: item non-watching modifié)
-    if (prevKeyRef.current === watchingKey) return
-    prevKeyRef.current = watchingKey
+      // Évite un re-fetch si rien de pertinent n'a changé (ex: item non-watching modifié)
+      if (prevKeyRef.current === watchingKey) return
+      prevKeyRef.current = watchingKey
 
-    setLoading(true)
+      setLoading(true)
 
-    async function fetch() {
       const map = new Map<string, WeeklyEpisode[]>()
       weekDates.forEach((d) => map.set(d, []))
 
@@ -146,7 +149,7 @@ export function useWeeklySchedule(weekOffset = 0) {
       setLoading(false)
     }
 
-    fetch()
+    fetchSchedule()
   }, [watchingKey, weekDates, items])
 
   return { schedule, weekDates, loading }

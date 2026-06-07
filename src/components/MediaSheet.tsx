@@ -38,11 +38,12 @@ export default function MediaSheet({ item, open, onClose, initialTab = 'info' }:
   const hasProgress = item.type !== 'movie'
 
   useEffect(() => {
-    if (!open) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTab(initialTab)
-    setChecked(new Set(getWatchedForItem(item.id)))
-    setResolvedTotal(item.totalEpisodes)
+    function reset() {
+      setTab(initialTab)
+      setChecked(new Set(getWatchedForItem(item.id)))
+      setResolvedTotal(item.totalEpisodes)
+    }
+    if (open) reset()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, item.id])
 
