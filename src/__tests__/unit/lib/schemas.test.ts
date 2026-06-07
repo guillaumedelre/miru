@@ -22,12 +22,14 @@ describe('TrackedItemSchema', () => {
   })
 
   it('rejects missing required field id', () => {
-    const { id: _id, ...rest } = validItem
+    const { id, ...rest } = validItem
+    void id
     expect(TrackedItemSchema.safeParse(rest).success).toBe(false)
   })
 
   it('rejects missing required field title', () => {
-    const { title: _t, ...rest } = validItem
+    const { title, ...rest } = validItem
+    void title
     expect(TrackedItemSchema.safeParse(rest).success).toBe(false)
   })
 
@@ -98,7 +100,8 @@ describe('WatchedEpisodeSchema', () => {
   })
 
   it('rejects missing itemId', () => {
-    const { itemId: _id, ...rest } = validEp
+    const { itemId, ...rest } = validEp
+    void itemId
     expect(WatchedEpisodeSchema.safeParse(rest).success).toBe(false)
   })
 
