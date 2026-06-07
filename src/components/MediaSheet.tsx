@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetClose, SheetBody } from '@/components/ui/sheet'
@@ -72,43 +72,47 @@ export default function MediaSheet({ item, open, onClose, initialTab = 'info' }:
     onClose()
   }
 
-  const anilist = isAnilistDetails(details) ? details : null
-  const tmdb = details !== null && !isAnilistDetails(details) ? details : null
+  const { title, cover, genres, score, meta, description, streamingLinks, bannerUrl } = useMemo(() => {
+    const al = isAnilistDetails(details) ? details : null
+    const td = details !== null && !isAnilistDetails(details) ? details : null
 
-  const title = anilist
-    ? (anilist.title.english ?? anilist.title.romaji)
-    : (tmdb?.title ?? tmdb?.name ?? item.title)
+    const t = al
+      ? (al.title.english ?? al.title.romaji)
+      : (td?.title ?? td?.name ?? item.title)
 
-  const cover = anilist
-    ? (anilist.coverImage.extraLarge ?? anilist.coverImage.large)
-    : posterUrl(tmdb?.poster_path ?? null)
+    const c = al
+      ? (al.coverImage.extraLarge ?? al.coverImage.large)
+      : posterUrl(td?.poster_path ?? null)
 
-  const genres = anilist?.genres ?? tmdb?.genres?.map((g) => g.name) ?? []
+    const g = al?.genres ?? td?.genres?.map((g) => g.name) ?? []
 
-  const score = anilist
-    ? (anilist.averageScore != null ? (anilist.averageScore / 10).toFixed(1) : null)
-    : (tmdb?.vote_average ? tmdb.vote_average.toFixed(1) : null)
+    const s = al
+      ? (al.averageScore != null ? (al.averageScore / 10).toFixed(1) : null)
+      : (td?.vote_average ? td.vote_average.toFixed(1) : null)
 
-  const meta: string[] = []
-  if (anilist) {
-    if (anilist.startDate.year) meta.push(String(anilist.startDate.year))
-    if (anilist.studios.nodes[0]) meta.push(anilist.studios.nodes[0].name)
-    if (anilist.episodes) meta.push(`${anilist.episodes} épisodes`)
-    if (anilist.duration) meta.push(`${anilist.duration} min / ép.`)
-    if (anilist.status) meta.push(ANILIST_STATUS[anilist.status] ?? anilist.status)
-  } else if (tmdb) {
-    const year = tmdb.release_date?.slice(0, 4) ?? tmdb.first_air_date?.slice(0, 4)
-    if (year) meta.push(year)
-    if (tmdb.number_of_seasons) meta.push(`${tmdb.number_of_seasons} saison${tmdb.number_of_seasons > 1 ? 's' : ''}`)
-    if (tmdb.number_of_episodes) meta.push(`${tmdb.number_of_episodes} épisodes`)
-    if (tmdb.runtime) meta.push(`${tmdb.runtime} min`)
-  }
+    const m: string[] = []
+    if (al) {
+      if (al.startDate.year) m.push(String(al.startDate.year))
+      if (al.studios.nodes[0]) m.push(al.studios.nodes[0].name)
+      if (al.episodes) m.push(`${al.episodes} épisodes`)
+      if (al.duration) m.push(`${al.duration} min / ép.`)
+      if (al.status) m.push(ANILIST_STATUS[al.status] ?? al.status)
+    } else if (td) {
+      const year = td.release_date?.slice(0, 4) ?? td.first_air_date?.slice(0, 4)
+      if (year) m.push(year)
+      if (td.number_of_seasons) m.push(`${td.number_of_seasons} saison${td.number_of_seasons > 1 ? 's' : ''}`)
+      if (td.number_of_episodes) m.push(`${td.number_of_episodes} épisodes`)
+      if (td.runtime) m.push(`${td.runtime} min`)
+    }
 
-  const description = anilist?.description ? stripHtml(anilist.description) : (tmdb?.overview ?? null)
-  const streamingLinks = anilist?.externalLinks.filter((l) => l.type === 'STREAMING') ?? []
-  const bannerUrl = anilist?.bannerImage
-    ?? (tmdb?.backdrop_path ? `https://image.tmdb.org/t/p/w1280${tmdb.backdrop_path}` : null)
-    ?? cover
+    const desc = al?.description ? stripHtml(al.description) : (td?.overview ?? null)
+    const links = al?.externalLinks.filter((l) => l.type === 'STREAMING') ?? []
+    const banner = al?.bannerImage
+      ?? (td?.backdrop_path ? `https://image.tmdb.org/t/p/w1280${td.backdrop_path}` : null)
+      ?? c
+
+    return { title: t, cover: c, genres: g, score: s, meta: m, description: desc, streamingLinks: links, bannerUrl: banner }
+  }, [details, item])
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>

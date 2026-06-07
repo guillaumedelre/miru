@@ -81,8 +81,12 @@ export default function AddMediaDialog({ open, onClose, initialQuery }: Props) {
   const pageRef = useRef(1)
 
   useEffect(() => {
-    dispatch({ type: 'RESET', query: initialQuery ?? '' })
-  }, [open, initialQuery])
+    if (!open) dispatch({ type: 'RESET', query: '' })
+  }, [open])
+
+  useEffect(() => {
+    if (initialQuery) dispatch({ type: 'RESET', query: initialQuery })
+  }, [initialQuery])
 
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current)
