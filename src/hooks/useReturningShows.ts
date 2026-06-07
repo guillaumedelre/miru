@@ -5,7 +5,7 @@ import { getAiringSchedule } from '@/api/anilist'
 import { getNextEpisode } from '@/api/tmdb'
 import { getWeekDates } from '@/hooks/useWeeklySchedule'
 import { notifyApiError } from '@/lib/errors'
-import type { TrackedItem } from '@/types'
+import { isAnimeItem, isSeriesItem, type TrackedItem } from '@/types'
 
 export interface ReturningEntry {
   item: TrackedItem
@@ -29,7 +29,7 @@ export function useReturningShows(): { entries: ReturningEntry[]; loading: boole
       const futureEnd = weekEndTs + 365 * 24 * 60 * 60
       const result: ReturningEntry[] = []
 
-      const anilistItems = watching.filter(i => i.source === 'anilist')
+      const anilistItems = watching.filter(isAnimeItem)
       if (anilistItems.length > 0) {
         const ids = anilistItems.map(i => Number(i.sourceId))
         const schedules = await getAiringSchedule(ids, weekEndTs + 1, futureEnd).catch((err) => { notifyApiError('useReturningShows/anilist', err); return [] })
@@ -45,7 +45,7 @@ export function useReturningShows(): { entries: ReturningEntry[]; loading: boole
         }
       }
 
-      const tmdbItems = watching.filter(i => i.source === 'tmdb' && i.type === 'series')
+      const tmdbItems = watching.filter(isSeriesItem)
       await Promise.allSettled(
         tmdbItems.map(async item => {
           const ep = await getNextEpisode(Number(item.sourceId), item.progress).catch((err) => { notifyApiError('useReturningShows/tmdb', err); return null })

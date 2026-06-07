@@ -8,7 +8,7 @@ import { posterUrl, type TmdbDetails } from '@/api/tmdb'
 import { useStore } from '@/store'
 import { useMediaDetails } from '@/hooks/useMediaDetails'
 import { stripHtml } from '@/lib/formatting'
-import type { TrackedItem, Status } from '@/types'
+import { isAnimeItem, type TrackedItem, type Status } from '@/types'
 
 const ANILIST_STATUS: Record<string, string> = {
   FINISHED: 'Terminé',
@@ -240,7 +240,7 @@ export default function MediaSheet({ item, open, onClose, initialTab = 'info' }:
               source={item.source}
               type={item.type}
               totalEpisodes={item.totalEpisodes}
-              malId={item.malId}
+              malId={isAnimeItem(item) ? item.malId : undefined}
               checked={checked}
               onChange={setChecked}
               onTotalResolved={setResolvedTotal}
