@@ -32,5 +32,7 @@ export async function loadUserData(userId: string): Promise<UserData | null> {
 }
 
 export async function saveUserData(userId: string, data: UserData): Promise<void> {
-  await setDoc(doc(db, 'users', userId), data)
+  // Firestore rejects undefined values — JSON round-trip strips them
+  const clean = JSON.parse(JSON.stringify(data))
+  await setDoc(doc(db, 'users', userId), clean)
 }

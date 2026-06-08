@@ -2,12 +2,24 @@ import { z } from 'zod'
 
 const ENDPOINT = 'https://graphql.anilist.co'
 
-async function query<T>(q: string, variables: Record<string, unknown> = {}): Promise<T> {
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+
+async function query<T>(q: string, variables: Record<string, unknown> = {}, retries = 1): Promise<T> {
   const res = await fetch(ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query: q, variables }),
   })
+
+  if (res.status === 429) {
+    const retryAfter = parseInt(res.headers.get('Retry-After') ?? '60', 10)
+    if (retries > 0) {
+      await sleep(retryAfter * 1000)
+      return query(q, variables, retries - 1)
+    }
+    throw new Error(`AniList 429: rate limit exceeded, retry after ${retryAfter}s`)
+  }
+
   const json = await res.json()
   if (json.errors) throw new Error((json.errors as { message: string }[]).map(e => e.message).join('; '))
   return json.data

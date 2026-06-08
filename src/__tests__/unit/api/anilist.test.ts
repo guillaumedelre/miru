@@ -247,3 +247,45 @@ describe('getAnilistGenresBatch', () => {
     fetchSpy.mockRestore()
   })
 })
+
+describe('429 rate limit handling', () => {
+  it('retries once after a 429 and resolves with data', async () => {
+    let callCount = 0
+    server.use(
+      http.post(ANILIST_ENDPOINT, async () => {
+        callCount++
+        if (callCount === 1) {
+          return new HttpResponse(null, { status: 429, headers: { 'Retry-After': '0' } })
+        }
+        return HttpResponse.json({
+          data: {
+            Page: {
+              pageInfo: { hasNextPage: false },
+              media: [{
+                id: 1, idMal: null,
+                title: { romaji: 'Naruto', english: null },
+                coverImage: { large: 'https://img.example.com/naruto.jpg' },
+                episodes: 220, chapters: null, duration: 23,
+                type: 'ANIME' as const, status: 'FINISHED', nextAiringEpisode: null,
+              }],
+            },
+          },
+        })
+      }),
+    )
+
+    const { media } = await searchMedia('Naruto', 'ANIME')
+    expect(callCount).toBe(2)
+    expect(media[0].title.romaji).toBe('Naruto')
+  })
+
+  it('throws after exhausting all retries on persistent 429', async () => {
+    server.use(
+      http.post(ANILIST_ENDPOINT, async () =>
+        new HttpResponse(null, { status: 429, headers: { 'Retry-After': '0' } }),
+      ),
+    )
+
+    await expect(searchMedia('anything', 'ANIME')).rejects.toThrow('AniList 429')
+  })
+})
