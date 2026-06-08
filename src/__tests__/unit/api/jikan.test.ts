@@ -109,3 +109,66 @@ describe('HTTP errors', () => {
     await expect(searchAnime('test')).rejects.toThrow('Jikan 500')
   })
 })
+
+describe('episodeNameCache', () => {
+  it('returns the same promise on duplicate calls without a second network request', async () => {
+    let fetchCount = 0
+    server.use(
+      http.get(`${BASE}/anime/77701/episodes`, () => {
+        fetchCount++
+        return HttpResponse.json({
+          data: [{ mal_id: 3, title: 'Cached Episode' }],
+          pagination: { last_visible_page: 1 },
+        })
+      }),
+    )
+
+    const p1 = getEpisodeName(77701, 3)
+    const p2 = getEpisodeName(77701, 3)
+
+    expect(p1).toBe(p2)
+    await p1
+    expect(fetchCount).toBe(1)
+  }, 10000)
+})
+
+describe('ETag caching', () => {
+  it('sends If-None-Match on second call and handles 304 without re-fetching', async () => {
+    const captured: Array<{ page: string | null; etag: string | null }> = []
+
+    server.use(
+      http.get(`${BASE}/anime/77702/episodes`, ({ request }) => {
+        const url = new URL(request.url)
+        const page = url.searchParams.get('page')
+        const etag = request.headers.get('If-None-Match')
+        captured.push({ page, etag })
+
+        if (page === '1') {
+          if (etag === '"p1-etag"') return new HttpResponse(null, { status: 304 })
+          return HttpResponse.json(
+            { data: [{ mal_id: 1, title: 'Ep 1' }], pagination: { last_visible_page: 2 } },
+            { headers: { ETag: '"p1-etag"' } },
+          )
+        }
+        if (etag === '"p2-etag"') return new HttpResponse(null, { status: 304 })
+        return HttpResponse.json(
+          { data: [{ mal_id: 13, title: 'Last Episode' }], pagination: { last_visible_page: 2 } },
+          { headers: { ETag: '"p2-etag"' } },
+        )
+      }),
+    )
+
+    const count1 = await getAnimeEpisodeCount(77702)
+    const count2 = await getAnimeEpisodeCount(77702)
+
+    expect(count1).toBe(13)
+    expect(count2).toBe(13)
+
+    // First call: no ETags known yet
+    expect(captured[0]).toEqual({ page: '1', etag: null })
+    expect(captured[1]).toEqual({ page: '2', etag: null })
+    // Second call: sends stored ETags, server returns 304
+    expect(captured[2]).toEqual({ page: '1', etag: '"p1-etag"' })
+    expect(captured[3]).toEqual({ page: '2', etag: '"p2-etag"' })
+  }, 10000)
+})
