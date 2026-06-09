@@ -204,4 +204,15 @@ describe('getNextEpisode', () => {
     const result = await getNextEpisode(1396, 7)
     expect(result).toBeNull()
   })
+
+  it('accepts null air_date for unscheduled episodes', async () => {
+    server.use(
+      http.get(`${BASE}/tv/:id/season/:season/episode/:ep`, () =>
+        HttpResponse.json({ episode_number: 1, name: 'Pilot', air_date: null, season_number: 1 })
+      )
+    )
+    const result = await getNextEpisode(1396, 0)
+    expect(result).not.toBeNull()
+    expect(result?.air_date).toBeNull()
+  })
 })
