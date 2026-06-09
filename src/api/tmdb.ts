@@ -36,7 +36,7 @@ export type TmdbMedia = z.infer<typeof TmdbMediaSchema> & { _source: 'tmdb' }
 const TmdbEpisodeSchema = z.object({
   episode_number: z.number(),
   name: z.string(),
-  air_date: z.string(),
+  air_date: z.string().nullable(),
   season_number: z.number(),
 })
 
