@@ -43,6 +43,17 @@ describe('getEpisodeName', () => {
     expect(name).toBeNull()
   })
 
+  it('returns null when Jikan returns data: null', async () => {
+    server.use(
+      http.get(`${BASE}/anime/99901/episodes`, () =>
+        HttpResponse.json({ data: null, pagination: { last_visible_page: 1 } })
+      )
+    )
+
+    const name = await getEpisodeName(99901, 1)
+    expect(name).toBeNull()
+  })
+
   it('fetches page=2 for episode > 100', async () => {
     let capturedPage: string | null = null
 
@@ -83,6 +94,24 @@ describe('getAnimeEpisodeCount', () => {
 
     const count = await getAnimeEpisodeCount(16498)
     expect(count).toBe(13)
+  })
+
+  it('returns null when last page returns data: null', async () => {
+    server.use(
+      http.get(`${BASE}/anime/99902/episodes`, ({ request }) => {
+        const page = new URL(request.url).searchParams.get('page')
+        if (page === '1') {
+          return HttpResponse.json({
+            data: [{ mal_id: 1, title: 'Episode 1' }],
+            pagination: { last_visible_page: 2 },
+          })
+        }
+        return HttpResponse.json({ data: null, pagination: { last_visible_page: 2 } })
+      })
+    )
+
+    const count = await getAnimeEpisodeCount(99902)
+    expect(count).toBeNull()
   })
 
   it('returns null when last_visible_page is 0', async () => {
