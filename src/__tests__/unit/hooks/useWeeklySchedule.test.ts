@@ -113,12 +113,12 @@ describe('useWeeklySchedule', () => {
     const { result } = renderHook(() => useWeeklySchedule(0), {
       wrapper: makeWrapper('sched-anime'),
     })
-    await waitFor(() => expect(result.current.loading).toBe(false), { timeout: 5000 })
-
     const date = new Date(airingAt * 1000).toLocaleDateString('sv-SE')
-    const eps = result.current.schedule.get(date)
-    expect(eps).toBeDefined()
-    expect(eps![0]).toMatchObject({ itemId: animeItem.id, episode: 5, type: 'anime' })
+    await waitFor(() => {
+      const eps = result.current.schedule.get(date)
+      expect(eps).toBeDefined()
+      expect(eps![0]).toMatchObject({ itemId: animeItem.id, episode: 5, type: 'anime' })
+    }, { timeout: 5000 })
   })
 
   it('populates schedule with TMDB series episode within the week', async () => {
