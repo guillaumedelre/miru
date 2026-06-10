@@ -71,8 +71,8 @@ export function getEpisodeName(malId: number, episodeNumber: number): Promise<st
 
   const p = throttled(async () => {
     const page = Math.ceil(episodeNumber / 100)
-    const data = await get<{ data: unknown[] }>(`/anime/${malId}/episodes?page=${page}`)
-    const episodes = z.array(JikanEpisodeSchema).parse(data.data)
+    const data = await get<{ data: unknown[] | null }>(`/anime/${malId}/episodes?page=${page}`)
+    const episodes = z.array(JikanEpisodeSchema).parse(data.data ?? [])
     const ep = episodes.find((e) => e.mal_id === episodeNumber)
     return ep?.title ?? null
   })
@@ -91,8 +91,8 @@ export function getAnimeEpisodeCount(malId: number): Promise<number | null> {
     const { pagination } = JikanPaginationSchema.parse(first)
     const lastPage = pagination.last_visible_page
     if (lastPage === 0) return null
-    const last = await get<{ data: unknown[] }>(`/anime/${malId}/episodes?page=${lastPage}`)
-    const episodes = z.array(JikanEpisodeSchema).parse(last.data)
+    const last = await get<{ data: unknown[] | null }>(`/anime/${malId}/episodes?page=${lastPage}`)
+    const episodes = z.array(JikanEpisodeSchema).parse(last.data ?? [])
     if (!episodes.length) return null
     return episodes[episodes.length - 1].mal_id
   })
